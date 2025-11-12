@@ -33,7 +33,8 @@ service cloud.firestore {
       allow list: if isSignedIn();
       
       // ایجاد: کاربران می‌توانند خودشان را ثبت‌نام کنند (با approved: false)
-      allow create: if isSignedIn() && request.auth.uid == userId && 
+      // نکته: userId باید با request.auth.uid یکسان باشد (یعنی کاربر خودش را ثبت می‌کند)
+      allow create: if request.auth != null && request.auth.uid == userId && 
                      request.resource.data.approved == false;
       
       // ویرایش: فقط admin می‌تواند کاربران را ویرایش کند (تایید/رد)
