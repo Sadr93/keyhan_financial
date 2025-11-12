@@ -1,0 +1,7 @@
+# Ignore files from Netlify secret scanning
+firebase-config.js
+firebase-config.template.js
+*.local.js
+.env
+.env.local
+

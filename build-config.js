@@ -1,5 +1,5 @@
 // این script در Netlify Build اجرا می‌شود
-// Environment Variables را از Netlify می‌گیرد و firebase-config.js می‌سازد
+// Environment Variables را از Netlify می‌گیرد و در HTML جایگزین می‌کند
 
 const fs = require('fs');
 const path = require('path');
@@ -15,8 +15,8 @@ const config = {
   measurementId: process.env.FIREBASE_MEASUREMENT_ID || ''
 };
 
-// ساخت محتوای firebase-config.js
-const configContent = `// تنظیمات Firebase - از Netlify Environment Variables
+// ساخت محتوای Firebase config به صورت inline
+const firebaseConfigScript = `// تنظیمات Firebase - از Netlify Environment Variables
 const FIREBASE_CONFIG = {
   apiKey: "${config.apiKey}",
   authDomain: "${config.authDomain}",
@@ -35,14 +35,34 @@ if (typeof firebase !== 'undefined') {
     console.log('✅ Firebase آماده است');
 } else {
     console.log('⚠️ Firebase SDK لود نشده است');
+}`;
+
+// خواندن index.html
+const htmlPath = path.join(__dirname, 'index.html');
+let htmlContent = fs.readFileSync(htmlPath, 'utf8');
+
+// جایگزینی script tag با inline script
+const scriptTagRegex = /<script src="firebase-config\.js"><\/script>/;
+const inlineScript = `<script>\n${firebaseConfigScript}\n</script>`;
+
+if (scriptTagRegex.test(htmlContent)) {
+  htmlContent = htmlContent.replace(scriptTagRegex, inlineScript);
+  fs.writeFileSync(htmlPath, htmlContent, 'utf8');
+  console.log('✅ Firebase config در HTML inline شد');
+} else {
+  // اگر script tag پیدا نشد، بعد از firebase SDK scripts اضافه کن
+  const firebaseSDKRegex = /(<script src="https:\/\/www\.gstatic\.com\/firebasejs\/.*?\/firebase-firestore-compat\.js"><\/script>)/;
+  if (firebaseSDKRegex.test(htmlContent)) {
+    htmlContent = htmlContent.replace(firebaseSDKRegex, `$1\n    ${inlineScript}`);
+    fs.writeFileSync(htmlPath, htmlContent, 'utf8');
+    console.log('✅ Firebase config در HTML inline شد');
+  } else {
+    // ساخت firebase-config.js به عنوان fallback
+    const configPath = path.join(__dirname, 'firebase-config.js');
+    fs.writeFileSync(configPath, firebaseConfigScript, 'utf8');
+    console.log('✅ firebase-config.js ساخته شد (fallback)');
+  }
 }
-`;
-
-// نوشتن فایل
-const configPath = path.join(__dirname, 'firebase-config.js');
-fs.writeFileSync(configPath, configContent, 'utf8');
-
-console.log('✅ firebase-config.js ساخته شد');
 
 // اگر Environment Variables تنظیم نشده باشند، هشدار بده
 if (!config.apiKey || !config.projectId) {
