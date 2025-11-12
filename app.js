@@ -1387,10 +1387,7 @@ function showAuthModal() {
     const authModal = document.getElementById('authModal');
     if (authModal) {
         authModal.classList.add('show');
-        document.getElementById('loginForm').classList.add('active');
-        document.getElementById('registerForm').classList.remove('active');
-        document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-        document.querySelector('.auth-tab[data-tab="register"]').classList.remove('active');
+        switchAuthTab('login');
     }
 }
 
@@ -1402,23 +1399,43 @@ function hideAuthModal() {
     }
 }
 
+// تغییر Tab در Modal ورود
+function switchAuthTab(tabName) {
+    // Update tabs
+    document.querySelectorAll('.auth-tab').forEach(t => {
+        t.classList.remove('active');
+    });
+    const activeTab = document.querySelector(`.auth-tab[data-tab="${tabName}"]`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
+    
+    // Update forms
+    document.getElementById('loginForm').classList.toggle('active', tabName === 'login');
+    document.getElementById('registerForm').classList.toggle('active', tabName === 'register');
+    
+    // Update title
+    const title = document.getElementById('authModalTitle');
+    if (title) {
+        title.textContent = tabName === 'login' ? 'خوش آمدید' : 'ثبت‌نام';
+    }
+}
+
+// Toggle password visibility
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+}
+
 // تنظیم Event Listeners برای Authentication
 function setupAuthListeners() {
     // Tab switching
     document.querySelectorAll('.auth-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             const tabName = this.getAttribute('data-tab');
-            
-            // Update tabs
-            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Update forms
-            document.getElementById('loginForm').classList.toggle('active', tabName === 'login');
-            document.getElementById('registerForm').classList.toggle('active', tabName === 'register');
-            
-            // Update title
-            document.getElementById('authModalTitle').textContent = tabName === 'login' ? 'ورود به سیستم' : 'ثبت‌نام';
+            switchAuthTab(tabName);
         });
     });
     

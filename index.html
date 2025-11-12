@@ -309,58 +309,172 @@
     </div>
 
     <!-- Modal ورود/ثبت‌نام -->
-    <div id="authModal" class="modal">
-        <div class="modal-content auth-modal">
-            <div class="modal-header">
-                <h2 id="authModalTitle">ورود به سیستم</h2>
-                <button class="modal-close" id="closeAuthModal">&times;</button>
-            </div>
-            <div class="auth-tabs">
-                <button class="auth-tab active" data-tab="login">ورود</button>
-                <button class="auth-tab" data-tab="register">ثبت‌نام</button>
+    <div id="authModal" class="auth-modal-overlay">
+        <div class="auth-modal-container">
+            <div class="auth-modal-header">
+                <div class="auth-logo-section">
+                    <img src="Keyhan Logo Kit-29.png" alt="کیهان" class="auth-logo">
+                    <h2 id="authModalTitle">خوش آمدید</h2>
+                    <p class="auth-subtitle">به سیستم مدیریت مالی کیهان</p>
+                </div>
+                <button class="auth-modal-close" id="closeAuthModal" aria-label="بستن">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             </div>
             
-            <!-- فرم ورود -->
-            <form id="loginForm" class="auth-form">
-                <div class="form-group">
-                    <label for="loginEmail">ایمیل:</label>
-                    <input type="email" id="loginEmail" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">رمز عبور:</label>
-                    <input type="password" id="loginPassword" name="password" required>
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="btn-submit">ورود</button>
-                </div>
-            </form>
+            <div class="auth-tabs-container">
+                <button class="auth-tab active" data-tab="login">
+                    <span class="tab-icon">🔐</span>
+                    <span class="tab-text">ورود</span>
+                </button>
+                <button class="auth-tab" data-tab="register">
+                    <span class="tab-icon">✨</span>
+                    <span class="tab-text">ثبت‌نام</span>
+                </button>
+                <div class="auth-tab-indicator"></div>
+            </div>
+            
+            <div class="auth-forms-wrapper">
+                <!-- فرم ورود -->
+                <form id="loginForm" class="auth-form active">
+                    <div class="auth-form-content">
+                        <div class="form-group">
+                            <label for="loginEmail" class="form-label">
+                                <span class="label-icon">📧</span>
+                                <span>ایمیل</span>
+                            </label>
+                            <input 
+                                type="email" 
+                                id="loginEmail" 
+                                name="email" 
+                                class="form-input" 
+                                placeholder="example@email.com"
+                                required
+                                autocomplete="email"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="loginPassword" class="form-label">
+                                <span class="label-icon">🔒</span>
+                                <span>رمز عبور</span>
+                            </label>
+                            <div class="password-input-wrapper">
+                                <input 
+                                    type="password" 
+                                    id="loginPassword" 
+                                    name="password" 
+                                    class="form-input" 
+                                    placeholder="رمز عبور خود را وارد کنید"
+                                    required
+                                    autocomplete="current-password"
+                                >
+                                <button type="button" class="password-toggle" onclick="togglePassword('loginPassword')">
+                                    <span class="eye-icon">👁️</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="auth-submit-btn">
+                                <span>ورود به سیستم</span>
+                                <span class="btn-arrow">→</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
 
-            <!-- فرم ثبت‌نام -->
-            <form id="registerForm" class="auth-form" style="display: none;">
-                <div class="form-group">
-                    <label for="registerName">نام:</label>
-                    <input type="text" id="registerName" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerEmail">ایمیل:</label>
-                    <input type="email" id="registerEmail" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="registerPassword">رمز عبور:</label>
-                    <input type="password" id="registerPassword" name="password" required minlength="6">
-                </div>
-                <div class="form-group">
-                    <label for="registerRole">نقش:</label>
-                    <select id="registerRole" name="role" required>
-                        <option value="viewer">مشاهده‌گر (فقط مشاهده)</option>
-                        <option value="editor">ویرایش‌گر (مشاهده + اضافه/ویرایش)</option>
-                        <option value="admin">مدیر (دسترسی کامل)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <button type="submit" class="btn-submit">ثبت‌نام</button>
-                </div>
-            </form>
+                <!-- فرم ثبت‌نام -->
+                <form id="registerForm" class="auth-form">
+                    <div class="auth-form-content">
+                        <div class="form-group">
+                            <label for="registerName" class="form-label">
+                                <span class="label-icon">👤</span>
+                                <span>نام و نام خانوادگی</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="registerName" 
+                                name="name" 
+                                class="form-input" 
+                                placeholder="نام خود را وارد کنید"
+                                required
+                                autocomplete="name"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="registerEmail" class="form-label">
+                                <span class="label-icon">📧</span>
+                                <span>ایمیل</span>
+                            </label>
+                            <input 
+                                type="email" 
+                                id="registerEmail" 
+                                name="email" 
+                                class="form-input" 
+                                placeholder="example@email.com"
+                                required
+                                autocomplete="email"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="registerPassword" class="form-label">
+                                <span class="label-icon">🔒</span>
+                                <span>رمز عبور</span>
+                                <span class="label-hint">(حداقل 6 کاراکتر)</span>
+                            </label>
+                            <div class="password-input-wrapper">
+                                <input 
+                                    type="password" 
+                                    id="registerPassword" 
+                                    name="password" 
+                                    class="form-input" 
+                                    placeholder="رمز عبور خود را انتخاب کنید"
+                                    required 
+                                    minlength="6"
+                                    autocomplete="new-password"
+                                >
+                                <button type="button" class="password-toggle" onclick="togglePassword('registerPassword')">
+                                    <span class="eye-icon">👁️</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="registerRole" class="form-label">
+                                <span class="label-icon">🎭</span>
+                                <span>نقش کاربری</span>
+                            </label>
+                            <select id="registerRole" name="role" class="form-select" required>
+                                <option value="">انتخاب نقش...</option>
+                                <option value="viewer">👀 مشاهده‌گر - فقط مشاهده تراکنش‌ها</option>
+                                <option value="editor">✏️ ویرایش‌گر - مشاهده و ویرایش تراکنش‌ها</option>
+                                <option value="admin">👑 مدیر - دسترسی کامل</option>
+                            </select>
+                            <p class="form-hint">نقش شما توسط مدیر تایید خواهد شد</p>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="auth-submit-btn">
+                                <span>ثبت‌نام</span>
+                                <span class="btn-arrow">→</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="auth-footer">
+                <p class="auth-footer-text">
+                    <span>🔒</span>
+                    اطلاعات شما امن است
+                </p>
+            </div>
         </div>
     </div>
 
