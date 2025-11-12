@@ -1569,21 +1569,31 @@ async function handleRegister(name, email, password, role) {
 
 // نمایش پیام در انتظار تایید
 function showPendingApprovalMessage() {
+    const authModal = document.getElementById('authModal');
+    if (!authModal) return;
+    
+    // حذف پیام قبلی اگر وجود دارد
+    const existingMessage = authModal.querySelector('.pending-approval-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = 'pending-approval-message';
     messageDiv.innerHTML = `
-        <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
-            <p style="color: #856404; margin: 0; font-weight: 500;">
-                ⏳ حساب کاربری شما در انتظار تایید مدیر است. بعد از تایید می‌توانید وارد شوید.
-            </p>
-        </div>
+        <p>
+            ⏳ حساب کاربری شما در انتظار تایید مدیر است. بعد از تایید می‌توانید وارد شوید.
+        </p>
     `;
-    const authModal = document.getElementById('authModal');
-    if (authModal) {
-        const modalContent = authModal.querySelector('.modal-content');
-        if (modalContent && !modalContent.querySelector('.pending-approval-message')) {
-            modalContent.insertBefore(messageDiv, modalContent.firstChild);
+    
+    const authFormsWrapper = authModal.querySelector('.auth-forms-wrapper');
+    if (authFormsWrapper) {
+        // حذف پیام قبلی اگر وجود دارد
+        const existing = authFormsWrapper.querySelector('.pending-approval-message');
+        if (existing) {
+            existing.remove();
         }
+        authFormsWrapper.insertBefore(messageDiv, authFormsWrapper.firstChild);
     }
 }
 
