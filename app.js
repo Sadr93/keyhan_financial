@@ -1681,41 +1681,56 @@ async function handleLogin(email, password) {
 
 // ثبت‌نام
 async function handleRegister(name, email, password, role) {
+    console.log('🔵 شروع ثبت‌نام:', { name, email, role });
+    
     if (!auth || !db) {
+        console.error('❌ Firebase فعال نیست');
         showMessage('Firebase فعال نیست', 'error');
         return;
     }
     
     try {
+        console.log('🔵 در حال ایجاد کاربر در Authentication...');
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        console.log('✅ کاربر در Authentication ایجاد شد:', userCredential.user.uid);
         
         // بررسی اینکه آیا این اولین کاربر است یا نه
         let isFirstUser = false;
         let shouldAutoApprove = false;
         
         try {
+            console.log('🔵 در حال بررسی کاربران موجود...');
             const usersSnapshot = await db.collection('users').get();
             isFirstUser = usersSnapshot.empty;
             shouldAutoApprove = isFirstUser && role === 'admin';
+            console.log('✅ بررسی کاربران انجام شد:', { isFirstUser, shouldAutoApprove });
         } catch (error) {
-            console.warn('خطا در بررسی کاربران موجود:', error);
+            console.warn('⚠️ خطا در بررسی کاربران موجود:', error);
             // اگر خطا داد، فرض می‌کنیم که اولین کاربر است
             isFirstUser = true;
             shouldAutoApprove = role === 'admin';
+            console.log('⚠️ فرض می‌کنیم اولین کاربر است:', { isFirstUser, shouldAutoApprove });
         }
         
         // ذخیره اطلاعات کاربر در Firestore (همیشه با approved: false شروع می‌کنیم)
+        console.log('🔵 در حال ثبت کاربر در Firestore...');
         try {
-            await db.collection('users').doc(userCredential.user.uid).set({
+            const userData = {
                 name: name,
                 email: email,
                 role: role,
                 approved: false, // Security Rules اجازه approved: true در create نمی‌دهد
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            };
+            console.log('🔵 داده‌های کاربر:', userData);
+            
+            await db.collection('users').doc(userCredential.user.uid).set(userData);
             console.log('✅ کاربر در Firestore ثبت شد:', userCredential.user.uid);
+            console.log('✅ Collection "users" باید اکنون در Firebase Console قابل مشاهده باشد');
         } catch (firestoreError) {
             console.error('❌ خطا در ثبت کاربر در Firestore:', firestoreError);
+            console.error('❌ کد خطا:', firestoreError.code);
+            console.error('❌ پیام خطا:', firestoreError.message);
             
             // اگر خطای permission-denied بود، پیام واضح بده
             if (firestoreError.code === 'permission-denied') {
@@ -1819,15 +1834,19 @@ async function handleRegister(name, email, password, role) {
         updatePageVisibility();
         
     } catch (error) {
-        console.error('خطا در ثبت‌نام:', error);
+        console.error('❌ خطا در ثبت‌نام:', error);
+        console.error('❌ کد خطا:', error.code);
+        console.error('❌ پیام خطا:', error.message);
+        console.error('❌ جزئیات خطا:', error);
         
         // اگر کاربر در Authentication ایجاد شد اما در Firestore خطا داد، کاربر را حذف کن
         if (auth && auth.currentUser) {
             try {
+                console.log('🔵 در حال حذف کاربر از Authentication...');
                 await auth.currentUser.delete();
                 console.log('✅ کاربر از Authentication حذف شد');
             } catch (deleteError) {
-                console.error('خطا در حذف کاربر از Authentication:', deleteError);
+                console.error('❌ خطا در حذف کاربر از Authentication:', deleteError);
             }
         }
         
@@ -1841,12 +1860,38 @@ async function handleRegister(name, email, password, role) {
         } else if (error.code === 'auth/network-request-failed') {
             errorMessage = 'خطا در اتصال به اینترنت. لطفاً دوباره تلاش کنید.';
         } else if (error.code === 'permission-denied') {
-            errorMessage = 'خطا در دسترسی به دیتابیس. لطفاً Security Rules را بررسی کنید.';
+            errorMessage = '❌ خطا در دسترسی به دیتابیس. لطفاً Security Rules را بررسی کنید. برای راهنمای کامل، فایل MANUAL_SETUP_GUIDE.md را ببینید.';
             showSecurityRulesWarning();
         } else {
             errorMessage = `خطا در ثبت‌نام: ${error.message || error.code || 'خطای ناشناخته'}`;
         }
         showMessage(errorMessage, 'error');
+        
+        // نمایش راهنمای دستی در صورت خطای permission-denied
+        if (error.code === 'permission-denied') {
+            setTimeout(() => {
+                const manualGuide = document.createElement('div');
+                manualGuide.style.cssText = 'background: #e7f3ff; border: 2px solid #2196F3; border-radius: 10px; padding: 20px; margin: 20px; direction: rtl; position: fixed; top: 200px; left: 20px; right: 20px; z-index: 10001; max-width: 800px; margin: 20px auto;';
+                manualGuide.innerHTML = `
+                    <h3 style="margin: 0 0 10px 0; color: #1976D2;">📖 راهنمای ایجاد دستی Collection</h3>
+                    <p style="margin: 0 0 15px 0; color: #1976D2;">
+                        می‌توانید به صورت دستی Collection "users" را ایجاد کنید:
+                    </p>
+                    <ol style="margin: 0 0 15px 0; padding-right: 20px; color: #1976D2;">
+                        <li>به <a href="https://console.firebase.google.com/project/keyhan-financial/firestore" target="_blank" style="color: #1976D2; font-weight: bold;">Firebase Console > Firestore</a> بروید</li>
+                        <li>روی <strong>Start collection</strong> کلیک کنید</li>
+                        <li>Collection ID: <code>users</code></li>
+                        <li>Document ID: UID کاربر را از <a href="https://console.firebase.google.com/project/keyhan-financial/authentication/users" target="_blank" style="color: #1976D2; font-weight: bold;">Authentication > Users</a> کپی کنید</li>
+                        <li>فیلدها را اضافه کنید: <code>name</code> (string), <code>email</code> (string), <code>role</code> (string: "admin"), <code>approved</code> (boolean: true)</li>
+                        <li>برای راهنمای کامل، فایل <code>MANUAL_SETUP_GUIDE.md</code> را ببینید</li>
+                    </ol>
+                    <button onclick="this.parentElement.remove();" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                        بستن
+                    </button>
+                `;
+                document.body.appendChild(manualGuide);
+            }, 500);
+        }
     }
 }
 
