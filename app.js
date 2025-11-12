@@ -1640,69 +1640,44 @@ function setupAuthListeners() {
     }
 }
 
-// ورود
+// ورود (localStorage)
 async function handleLogin(email, password) {
-    if (!auth || !db) {
-        showMessage('Firebase Authentication فعال نیست', 'error');
-        return;
-    }
-    
     try {
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const users = getLocalUsers();
+        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
         
-        // بررسی اینکه کاربر تایید شده است یا نه
-        const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
-        
-        if (!userDoc.exists) {
-            await auth.signOut();
-            currentUser = null;
-            userRole = null;
-            updatePageVisibility();
-            showMessage('حساب کاربری شما یافت نشد. لطفاً دوباره ثبت‌نام کنید.', 'error');
+        if (!user) {
+            showMessage('کاربری با این ایمیل یافت نشد', 'error');
             return;
         }
         
-        const userData = userDoc.data();
-        
-        if (!userData.approved) {
-            await auth.signOut();
-            currentUser = null;
-            userRole = null;
-            updatePageVisibility();
-            showMessage('⏳ حساب کاربری شما هنوز تایید نشده است. لطفاً منتظر تایید مدیر بمانید.', 'error');
-            showPendingApprovalMessage();
+        if (user.password !== password) {
+            showMessage('رمز عبور اشتباه است', 'error');
             return;
         }
         
-        // کاربر تایید شده است - اجازه ورود
+        // لاگین موفق
+        currentUser = {
+            id: user.id,
+            email: user.email,
+            name: user.name
+        };
+        userRole = user.role;
+        
+        // ذخیره session
+        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+            userId: user.id,
+            loginTime: new Date().toISOString()
+        }));
+        
         showMessage('✅ ورود موفقیت‌آمیز بود', 'success');
-        await loadUserRole(userCredential.user.uid);
         updateUIForAuth();
         updatePageVisibility();
         switchPage('transactions');
         loadTransactions();
     } catch (error) {
         console.error('خطا در ورود:', error);
-        
-        // اطمینان از اینکه کاربر لاگین نیست
-        if (auth.currentUser) {
-            await auth.signOut();
-        }
-        currentUser = null;
-        userRole = null;
-        updatePageVisibility();
-        
-        let errorMessage = 'خطا در ورود';
-        if (error.code === 'auth/user-not-found') {
-            errorMessage = 'کاربری با این ایمیل یافت نشد';
-        } else if (error.code === 'auth/wrong-password') {
-            errorMessage = 'رمز عبور اشتباه است';
-        } else if (error.code === 'auth/invalid-email') {
-            errorMessage = 'ایمیل نامعتبر است';
-        } else if (error.code === 'auth/network-request-failed') {
-            errorMessage = 'خطا در اتصال به اینترنت. لطفاً دوباره تلاش کنید.';
-        }
-        showMessage(errorMessage, 'error');
+        showMessage('خطا در ورود. لطفاً دوباره تلاش کنید.', 'error');
     }
 }
 
