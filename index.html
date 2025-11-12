@@ -44,20 +44,9 @@
                     </div>
                 </div>
                 
-                <div class="auth-tabs-container">
-                    <button class="auth-tab active" data-tab="login">
-                        <span class="tab-icon">🔐</span>
-                        <span class="tab-text">ورود</span>
-                    </button>
-                    <button class="auth-tab" data-tab="register">
-                        <span class="tab-icon">✨</span>
-                        <span class="tab-text">ثبت‌نام</span>
-                    </button>
-                </div>
-                
                 <div class="auth-forms-wrapper">
                     <!-- فرم ورود -->
-                    <form id="loginForm" class="auth-form active">
+                    <form id="loginForm" class="auth-form">
                         <div class="auth-form-content">
                             <div class="form-group">
                                 <label for="loginEmail" class="form-label">
@@ -99,87 +88,6 @@
                             <div class="form-actions">
                                 <button type="submit" class="auth-submit-btn">
                                     <span>ورود به سیستم</span>
-                                    <span class="btn-arrow">→</span>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-
-                    <!-- فرم ثبت‌نام -->
-                    <form id="registerForm" class="auth-form">
-                        <div class="auth-form-content">
-                            <div class="form-group">
-                                <label for="registerName" class="form-label">
-                                    <span class="label-icon">👤</span>
-                                    <span>نام و نام خانوادگی</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="registerName" 
-                                    name="name" 
-                                    class="form-input" 
-                                    placeholder="نام خود را وارد کنید"
-                                    required
-                                    autocomplete="name"
-                                >
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="registerEmail" class="form-label">
-                                    <span class="label-icon">📧</span>
-                                    <span>ایمیل</span>
-                                </label>
-                                <input 
-                                    type="email" 
-                                    id="registerEmail" 
-                                    name="email" 
-                                    class="form-input" 
-                                    placeholder="example@email.com"
-                                    required
-                                    autocomplete="email"
-                                >
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="registerPassword" class="form-label">
-                                    <span class="label-icon">🔒</span>
-                                    <span>رمز عبور</span>
-                                    <span class="label-hint">(حداقل 6 کاراکتر)</span>
-                                </label>
-                                <div class="password-input-wrapper">
-                                    <input 
-                                        type="password" 
-                                        id="registerPassword" 
-                                        name="password" 
-                                        class="form-input" 
-                                        placeholder="رمز عبور خود را انتخاب کنید"
-                                        required 
-                                        minlength="6"
-                                        autocomplete="new-password"
-                                    >
-                                    <button type="button" class="password-toggle" onclick="togglePassword('registerPassword')">
-                                        <span class="eye-icon">👁️</span>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="registerRole" class="form-label">
-                                    <span class="label-icon">🎭</span>
-                                    <span>نقش کاربری</span>
-                                </label>
-                                <select id="registerRole" name="role" class="form-select" required>
-                                    <option value="">انتخاب نقش...</option>
-                                    <option value="viewer">👀 مشاهده‌گر - فقط مشاهده تراکنش‌ها</option>
-                                    <option value="editor">✏️ ویرایش‌گر - مشاهده و ویرایش تراکنش‌ها</option>
-                                    <option value="admin">👑 مدیر - دسترسی کامل</option>
-                                </select>
-                                <p class="form-hint">نقش شما توسط مدیر تایید خواهد شد</p>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="auth-submit-btn">
-                                    <span>ثبت‌نام</span>
                                     <span class="btn-arrow">→</span>
                                 </button>
                             </div>

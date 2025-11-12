@@ -1547,20 +1547,7 @@ function hideAuthModal() {
 }
 
 // تغییر Tab در Modal ورود
-function switchAuthTab(tabName) {
-    // Update tabs
-    document.querySelectorAll('.auth-tab').forEach(t => {
-        t.classList.remove('active');
-    });
-    const activeTab = document.querySelector(`.auth-tab[data-tab="${tabName}"]`);
-    if (activeTab) {
-        activeTab.classList.add('active');
-    }
-    
-    // Update forms
-    document.getElementById('loginForm').classList.toggle('active', tabName === 'login');
-    document.getElementById('registerForm').classList.toggle('active', tabName === 'register');
-}
+// تابع switchAuthTab حذف شد - دیگر ثبت‌نام از طریق سایت انجام نمی‌شود
 
 // Toggle password visibility
 function togglePassword(inputId) {
@@ -1593,18 +1580,7 @@ function setupAuthListeners() {
         });
     }
     
-    // Register form
-    const registerForm = document.getElementById('registerForm');
-    if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('registerName').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            const role = document.getElementById('registerRole').value;
-            await handleRegister(name, email, password, role);
-        });
-    }
+    // Register form حذف شد - ثبت‌نام فقط از طریق Firebase Console انجام می‌شود
     
     // Logout button
     const logoutBtn = document.getElementById('logoutBtn');
@@ -1818,20 +1794,7 @@ async function handleRegister(name, email, password, role) {
         // صبر کردن تا signOut کامل شود
         await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Reset فرم
-        document.getElementById('registerForm').reset();
-        
-        // نمایش پیام موفقیت
-        showMessage('✅ ثبت‌نام با موفقیت انجام شد! لطفاً منتظر تایید مدیر بمانید. بعد از تایید می‌توانید وارد شوید.', 'success');
-        
-        // تغییر به تب ورود
-        switchAuthTab('login');
-        
-        // نمایش پیام در انتظار تایید
-        showPendingApprovalMessage();
-        
-        // اطمینان از اینکه در صفحه ورود هستیم
-        updatePageVisibility();
+        // این بخش دیگر استفاده نمی‌شود - ثبت‌نام از طریق سایت حذف شده است
         
     } catch (error) {
         console.error('❌ خطا در ثبت‌نام:', error);
@@ -1937,7 +1900,6 @@ async function handleLogout() {
                 filteredTransactions = [];
                 updateUIForAuth();
                 updatePageVisibility();
-                switchAuthTab('login');
                 showMessage('خروج موفقیت‌آمیز بود', 'success');
             } catch (error) {
                 console.error('خطا در خروج:', error);
