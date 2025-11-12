@@ -153,7 +153,7 @@ function showSecurityRulesWarning() {
     const warning = document.createElement('div');
     warning.className = 'security-rules-warning';
     warning.innerHTML = `
-        <div style="background: #f8d7da; border: 2px solid #dc3545; border-radius: 10px; padding: 20px; margin: 20px; direction: rtl;">
+        <div style="background: #f8d7da; border: 2px solid #dc3545; border-radius: 10px; padding: 20px; margin: 20px; direction: rtl; position: fixed; top: 20px; left: 20px; right: 20px; z-index: 10000; max-width: 800px; margin: 20px auto;">
             <h3 style="margin: 0 0 10px 0; color: #721c24;">🔒 Security Rules نیاز به تنظیم دارد</h3>
             <p style="margin: 0 0 15px 0; color: #721c24;">
                 Firestore فعال است اما Security Rules درست تنظیم نشده است. لطفاً:
@@ -162,12 +162,65 @@ function showSecurityRulesWarning() {
                 <li>به <a href="https://console.firebase.google.com/project/keyhan-financial/firestore/rules" target="_blank" style="color: #007bff; font-weight: bold;">Firebase Console > Firestore > Rules</a> بروید</li>
                 <li>این کد را جایگزین کنید:</li>
             </ol>
-            <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; direction: ltr; text-align: left; margin: 10px 0;">
-rules_version = '2';
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; direction: ltr; text-align: left; margin: 10px 0; font-size: 0.85em; max-height: 400px; overflow-y: auto;">rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /transactions/{document=**} {
-      allow read, write: if true;
+    
+    // Helper function: بررسی اینکه کاربر لاگین است
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Helper function: دریافت نقش کاربر
+    function getUserRole() {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userData != null && userData.role != null ? userData.role : 'viewer';
+    }
+    
+    // Helper function: بررسی اینکه کاربر تایید شده است
+    function isUserApproved() {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userData != null && userData.approved == true;
+    }
+    
+    // Collection: users
+    match /users/{userId} {
+      // کاربران می‌توانند اطلاعات خودشان را بخوانند
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      // همه کاربران لاگین شده می‌توانند لیست کاربران را ببینند (برای admin)
+      allow list: if isSignedIn();
+      
+      // ایجاد: کاربران می‌توانند خودشان را ثبت‌نام کنند (با approved: false)
+      allow create: if request.auth != null && request.auth.uid == userId && 
+                     request.resource.data.approved == false;
+      
+      // ویرایش: 
+      // 1. کاربر می‌تواند خودش را approve کند (برای اولین admin)
+      // 2. یا admin می‌تواند کاربران دیگر را approve/رد کند
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId && !resource.data.approved && request.resource.data.approved == true) ||
+        (getUserRole() == 'admin')
+      );
+      
+      // حذف: فقط admin
+      allow delete: if isSignedIn() && getUserRole() == 'admin';
+    }
+    
+    // Collection: transactions
+    match /transactions/{transactionId} {
+      // همه کاربران لاگین شده و تایید شده می‌توانند تراکنش‌ها را بخوانند
+      allow read: if isSignedIn() && isUserApproved();
+      
+      // ایجاد تراکنش: editor و admin (باید تایید شده باشند)
+      allow create: if isSignedIn() && isUserApproved() && 
+                     (getUserRole() == 'editor' || getUserRole() == 'admin');
+      
+      // ویرایش تراکنش: editor و admin (باید تایید شده باشند)
+      allow update: if isSignedIn() && isUserApproved() && 
+                     (getUserRole() == 'editor' || getUserRole() == 'admin');
+      
+      // حذف تراکنش: فقط admin (باید تایید شده باشد)
+      allow delete: if isSignedIn() && isUserApproved() && getUserRole() == 'admin';
     }
   }
 }</pre>
