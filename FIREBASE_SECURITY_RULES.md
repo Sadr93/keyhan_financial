@@ -22,7 +22,14 @@ service cloud.firestore {
     
     // Helper function: دریافت نقش کاربر
     function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userData != null && userData.role != null ? userData.role : 'viewer';
+    }
+    
+    // Helper function: بررسی اینکه کاربر تایید شده است
+    function isUserApproved() {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userData != null && userData.approved == true;
     }
     
     // Collection: users
@@ -46,17 +53,19 @@ service cloud.firestore {
     
     // Collection: transactions
     match /transactions/{transactionId} {
-      // همه کاربران لاگین شده می‌توانند تراکنش‌ها را بخوانند
-      allow read: if isSignedIn();
+      // همه کاربران لاگین شده و تایید شده می‌توانند تراکنش‌ها را بخوانند
+      allow read: if isSignedIn() && isUserApproved();
       
-      // ایجاد تراکنش: editor و admin
-      allow create: if isSignedIn() && (getUserRole() == 'editor' || getUserRole() == 'admin');
+      // ایجاد تراکنش: editor و admin (باید تایید شده باشند)
+      allow create: if isSignedIn() && isUserApproved() && 
+                     (getUserRole() == 'editor' || getUserRole() == 'admin');
       
-      // ویرایش تراکنش: editor و admin
-      allow update: if isSignedIn() && (getUserRole() == 'editor' || getUserRole() == 'admin');
+      // ویرایش تراکنش: editor و admin (باید تایید شده باشند)
+      allow update: if isSignedIn() && isUserApproved() && 
+                     (getUserRole() == 'editor' || getUserRole() == 'admin');
       
-      // حذف تراکنش: فقط admin
-      allow delete: if isSignedIn() && getUserRole() == 'admin';
+      // حذف تراکنش: فقط admin (باید تایید شده باشد)
+      allow delete: if isSignedIn() && isUserApproved() && getUserRole() == 'admin';
     }
   }
 }
