@@ -1488,16 +1488,15 @@ textarea::placeholder {
 }
 
 .auth-form {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
     width: 100%;
-    opacity: 0;
-    transform: translateX(30px);
-    pointer-events: none;
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* دیگر نیازی به .active نیست چون فقط یک فرم داریم */
 .auth-form.active {
     position: relative;
     opacity: 1;
