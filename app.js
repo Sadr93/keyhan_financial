@@ -59,13 +59,17 @@ let filteredTransactions = [];
 // Authentication state
 let currentUser = null;
 let userRole = null;
-let auth = null;
+// auth در firebase-config.js تعریف شده است
 
 // مقداردهی اولیه
 document.addEventListener('DOMContentLoaded', async function() {
     // بررسی Firebase
     if (typeof firebase !== 'undefined' && db) {
         useFirebase = true;
+        // auth در firebase-config.js تعریف شده است
+        if (typeof auth === 'undefined') {
+            auth = firebase.auth();
+        }
         console.log('✅ Firebase آماده است');
         
         // بررسی اینکه Firestore فعال است یا نه
