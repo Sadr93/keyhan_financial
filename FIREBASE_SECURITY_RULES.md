@@ -44,11 +44,15 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == userId && 
                      request.resource.data.approved == false;
       
-      // اجازه update برای approve کردن (برای اولین admin که خودش را approve می‌کند)
-      // یا برای admin هایی که کاربران دیگر را approve می‌کنند
-      
-      // ویرایش: فقط admin می‌تواند کاربران را ویرایش کند (تایید/رد)
-      allow update: if isSignedIn() && getUserRole() == 'admin';
+      // ویرایش: 
+      // 1. کاربر می‌تواند خودش را approve کند (برای اولین admin)
+      // 2. یا admin می‌تواند کاربران دیگر را approve/رد کند
+      allow update: if isSignedIn() && (
+        // کاربر می‌تواند خودش را approve کند (اگر هنوز approve نشده)
+        (request.auth.uid == userId && !resource.data.approved && request.resource.data.approved == true) ||
+        // یا admin می‌تواند کاربران دیگر را ویرایش کند
+        (getUserRole() == 'admin')
+      );
       
       // حذف: فقط admin
       allow delete: if isSignedIn() && getUserRole() == 'admin';
