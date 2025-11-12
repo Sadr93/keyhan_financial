@@ -1350,12 +1350,36 @@ async function checkAuthState() {
     
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            currentUser = user;
-            await loadUserRole(user.uid);
-            updateUIForAuth();
-            updatePageVisibility();
-            if (allTransactions.length === 0) {
-                loadTransactions();
+            // بررسی اینکه کاربر تایید شده است یا نه
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                
+                if (!userDoc.exists || !userDoc.data().approved) {
+                    // کاربر تایید نشده - خروج و نمایش صفحه ورود
+                    await auth.signOut();
+                    currentUser = null;
+                    userRole = null;
+                    updateUIForAuth();
+                    updatePageVisibility();
+                    return;
+                }
+                
+                // کاربر تایید شده است
+                currentUser = user;
+                await loadUserRole(user.uid);
+                updateUIForAuth();
+                updatePageVisibility();
+                if (allTransactions.length === 0) {
+                    loadTransactions();
+                }
+            } catch (error) {
+                console.error('خطا در بررسی وضعیت کاربر:', error);
+                // در صورت خطا، خروج و نمایش صفحه ورود
+                await auth.signOut();
+                currentUser = null;
+                userRole = null;
+                updateUIForAuth();
+                updatePageVisibility();
             }
         } else {
             currentUser = null;
@@ -1499,6 +1523,9 @@ async function handleLogin(email, password) {
         
         if (!userDoc.exists) {
             await auth.signOut();
+            currentUser = null;
+            userRole = null;
+            updatePageVisibility();
             showMessage('حساب کاربری شما یافت نشد. لطفاً دوباره ثبت‌نام کنید.', 'error');
             return;
         }
@@ -1507,12 +1534,16 @@ async function handleLogin(email, password) {
         
         if (!userData.approved) {
             await auth.signOut();
-            showMessage('حساب کاربری شما هنوز تایید نشده است. لطفاً منتظر تایید مدیر بمانید.', 'error');
+            currentUser = null;
+            userRole = null;
+            updatePageVisibility();
+            showMessage('⏳ حساب کاربری شما هنوز تایید نشده است. لطفاً منتظر تایید مدیر بمانید.', 'error');
             showPendingApprovalMessage();
             return;
         }
         
-        showMessage('ورود موفقیت‌آمیز بود', 'success');
+        // کاربر تایید شده است - اجازه ورود
+        showMessage('✅ ورود موفقیت‌آمیز بود', 'success');
         await loadUserRole(userCredential.user.uid);
         updateUIForAuth();
         updatePageVisibility();
@@ -1520,6 +1551,15 @@ async function handleLogin(email, password) {
         loadTransactions();
     } catch (error) {
         console.error('خطا در ورود:', error);
+        
+        // اطمینان از اینکه کاربر لاگین نیست
+        if (auth.currentUser) {
+            await auth.signOut();
+        }
+        currentUser = null;
+        userRole = null;
+        updatePageVisibility();
+        
         let errorMessage = 'خطا در ورود';
         if (error.code === 'auth/user-not-found') {
             errorMessage = 'کاربری با این ایمیل یافت نشد';
@@ -1527,6 +1567,8 @@ async function handleLogin(email, password) {
             errorMessage = 'رمز عبور اشتباه است';
         } else if (error.code === 'auth/invalid-email') {
             errorMessage = 'ایمیل نامعتبر است';
+        } else if (error.code === 'auth/network-request-failed') {
+            errorMessage = 'خطا در اتصال به اینترنت. لطفاً دوباره تلاش کنید.';
         }
         showMessage(errorMessage, 'error');
     }
