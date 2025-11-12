@@ -1729,10 +1729,22 @@ function updateUIForAuth() {
                 addTransactionBtn.style.display = 'block';
             }
         }
+
+        // نمایش دکمه مدیریت کاربران فقط برای admin
+        const usersNavBtn = document.getElementById('usersNavBtn');
+        if (usersNavBtn) {
+            if (userRole === 'admin') {
+                usersNavBtn.style.display = 'block';
+            } else {
+                usersNavBtn.style.display = 'none';
+            }
+        }
     } else {
         // مخفی کردن اطلاعات کاربر
         if (userInfo) userInfo.style.display = 'none';
         if (addTransactionBtn) addTransactionBtn.style.display = 'none';
+        const usersNavBtn = document.getElementById('usersNavBtn');
+        if (usersNavBtn) usersNavBtn.style.display = 'none';
     }
 }
 
