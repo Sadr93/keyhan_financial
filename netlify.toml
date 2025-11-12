@@ -1,0 +1,16 @@
+# تنظیمات Netlify برای Deploy
+
+[build]
+  # Netlify به صورت خودکار فایل‌های static را deploy می‌کند
+  # Build command برای ساخت firebase-config.js از Environment Variables
+  command = "node build-config.js"
+  publish = "."
+
+# Environment Variables در Netlify Dashboard تنظیم می‌شوند
+# این فایل فقط ساختار را نشان می‌دهد
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
