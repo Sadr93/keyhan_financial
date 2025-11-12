@@ -193,22 +193,22 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Helper function: دریافت نقش کاربر (با error handling)
-    function getUserRole() {
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return userData != null && userData.role != null ? userData.role : 'viewer';
-    }
-    
-    // Helper function: بررسی اینکه کاربر admin است (با error handling)
-    function isAdmin() {
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return userData != null && userData.role == 'admin' && userData.approved == true;
-    }
-    
     // Helper function: بررسی اینکه کاربر تایید شده است
     function isUserApproved() {
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return userData != null && userData.approved == true;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.approved == true;
+    }
+    
+    // Helper function: دریافت نقش کاربر
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Helper function: بررسی اینکه کاربر admin است
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.approved == true;
     }
     
     // Collection: users
@@ -219,14 +219,17 @@ service cloud.firestore {
       allow list: if isSignedIn();
       
       // ایجاد: کاربران می‌توانند خودشان را ثبت‌نام کنند (با approved: false)
-      allow create: if request.auth != null && request.auth.uid == userId && 
+      allow create: if request.auth != null && 
+                     request.auth.uid == userId && 
                      request.resource.data.approved == false;
       
       // ویرایش: 
       // 1. کاربر می‌تواند خودش را approve کند (برای اولین admin)
       // 2. یا admin می‌تواند کاربران دیگر را approve/رد کند
       allow update: if isSignedIn() && (
-        (request.auth.uid == userId && !resource.data.approved && request.resource.data.approved == true) ||
+        (request.auth.uid == userId && 
+         !resource.data.approved && 
+         request.resource.data.approved == true) ||
         (isAdmin())
       );
       
@@ -240,11 +243,13 @@ service cloud.firestore {
       allow read: if isSignedIn() && isUserApproved();
       
       // ایجاد تراکنش: editor و admin (باید تایید شده باشند)
-      allow create: if isSignedIn() && isUserApproved() && 
+      allow create: if isSignedIn() && 
+                     isUserApproved() && 
                      (getUserRole() == 'editor' || isAdmin());
       
       // ویرایش تراکنش: editor و admin (باید تایید شده باشند)
-      allow update: if isSignedIn() && isUserApproved() && 
+      allow update: if isSignedIn() && 
+                     isUserApproved() && 
                      (getUserRole() == 'editor' || isAdmin());
       
       // حذف تراکنش: فقط admin (باید تایید شده باشد)

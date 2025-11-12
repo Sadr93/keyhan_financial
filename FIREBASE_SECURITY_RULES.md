@@ -20,22 +20,22 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Helper function: دریافت نقش کاربر (با error handling)
-    function getUserRole() {
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return userData != null && userData.role != null ? userData.role : 'viewer';
-    }
-    
-    // Helper function: بررسی اینکه کاربر admin است (با error handling)
-    function isAdmin() {
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return userData != null && userData.role == 'admin' && userData.approved == true;
-    }
-    
     // Helper function: بررسی اینکه کاربر تایید شده است
     function isUserApproved() {
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return userData != null && userData.approved == true;
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.approved == true;
+    }
+    
+    // Helper function: دریافت نقش کاربر
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Helper function: بررسی اینکه کاربر admin است
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.approved == true;
     }
     
     // Collection: users
@@ -46,17 +46,17 @@ service cloud.firestore {
       allow list: if isSignedIn();
       
       // ایجاد: کاربران می‌توانند خودشان را ثبت‌نام کنند (با approved: false)
-      // نکته: userId باید با request.auth.uid یکسان باشد (یعنی کاربر خودش را ثبت می‌کند)
-      allow create: if request.auth != null && request.auth.uid == userId && 
+      allow create: if request.auth != null && 
+                     request.auth.uid == userId && 
                      request.resource.data.approved == false;
       
       // ویرایش: 
       // 1. کاربر می‌تواند خودش را approve کند (برای اولین admin)
       // 2. یا admin می‌تواند کاربران دیگر را approve/رد کند
       allow update: if isSignedIn() && (
-        // کاربر می‌تواند خودش را approve کند (اگر هنوز approve نشده)
-        (request.auth.uid == userId && !resource.data.approved && request.resource.data.approved == true) ||
-        // یا admin می‌تواند کاربران دیگر را ویرایش کند
+        (request.auth.uid == userId && 
+         !resource.data.approved && 
+         request.resource.data.approved == true) ||
         (isAdmin())
       );
       
@@ -70,11 +70,13 @@ service cloud.firestore {
       allow read: if isSignedIn() && isUserApproved();
       
       // ایجاد تراکنش: editor و admin (باید تایید شده باشند)
-      allow create: if isSignedIn() && isUserApproved() && 
+      allow create: if isSignedIn() && 
+                     isUserApproved() && 
                      (getUserRole() == 'editor' || isAdmin());
       
       // ویرایش تراکنش: editor و admin (باید تایید شده باشند)
-      allow update: if isSignedIn() && isUserApproved() && 
+      allow update: if isSignedIn() && 
+                     isUserApproved() && 
                      (getUserRole() == 'editor' || isAdmin());
       
       // حذف تراکنش: فقط admin (باید تایید شده باشد)
@@ -95,18 +97,10 @@ service cloud.firestore {
 ## نکات مهم
 
 - قبل از تنظیم این Rules، مطمئن شوید که Authentication فعال است
-- **اولین کاربر (Admin)**: باید به صورت دستی در Firebase Console تنظیم شود:
-  1. اولین کاربر را ثبت‌نام کنید (یا خودتان را)
-  2. به Firebase Console > Firestore Database بروید
-  3. Collection `users` را پیدا کنید
-  4. Document مربوط به کاربر را باز کنید
-  5. فیلد `approved` را به `true` تغییر دهید
-  6. فیلد `role` را به `admin` تغییر دهید
-  7. حالا می‌توانید وارد شوید و کاربران دیگر را تایید کنید
+- **اولین کاربر (Admin)**: به صورت خودکار approve می‌شود اگر اولین کاربر باشد و نقش admin داشته باشد
 
 ## سیستم تایید کاربران
 
 - کاربران جدید با `approved: false` ثبت می‌شوند
 - تا زمانی که admin آن‌ها را تایید نکند، نمی‌توانند وارد شوند
 - Admin می‌تواند در صفحه "مدیریت کاربران" کاربران را تایید یا رد کند
-
