@@ -1705,13 +1705,45 @@ async function handleRegister(name, email, password, role) {
         }
         
         // ذخیره اطلاعات کاربر در Firestore (همیشه با approved: false شروع می‌کنیم)
-        await db.collection('users').doc(userCredential.user.uid).set({
-            name: name,
-            email: email,
-            role: role,
-            approved: false, // Security Rules اجازه approved: true در create نمی‌دهد
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        try {
+            await db.collection('users').doc(userCredential.user.uid).set({
+                name: name,
+                email: email,
+                role: role,
+                approved: false, // Security Rules اجازه approved: true در create نمی‌دهد
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('✅ کاربر در Firestore ثبت شد:', userCredential.user.uid);
+        } catch (firestoreError) {
+            console.error('❌ خطا در ثبت کاربر در Firestore:', firestoreError);
+            
+            // اگر خطای permission-denied بود، پیام واضح بده
+            if (firestoreError.code === 'permission-denied') {
+                // کاربر را از Authentication حذف کن
+                if (auth && auth.currentUser) {
+                    try {
+                        await auth.currentUser.delete();
+                    } catch (deleteError) {
+                        console.error('خطا در حذف کاربر از Authentication:', deleteError);
+                    }
+                }
+                
+                showMessage('❌ خطا در ثبت‌نام: Security Rules در Firebase تنظیم نشده است. لطفاً Security Rules را از پیام هشدار کپی کنید و در Firebase Console قرار دهید.', 'error');
+                showSecurityRulesWarning();
+                return;
+            }
+            
+            // برای سایر خطاها، کاربر را حذف کن
+            if (auth && auth.currentUser) {
+                try {
+                    await auth.currentUser.delete();
+                } catch (deleteError) {
+                    console.error('خطا در حذف کاربر از Authentication:', deleteError);
+                }
+            }
+            
+            throw firestoreError; // خطا را به catch اصلی بفرست
+        }
         
         // اگر اولین admin است، خودش را approve می‌کند
         if (shouldAutoApprove) {
@@ -1768,6 +1800,7 @@ async function handleRegister(name, email, password, role) {
         if (auth && auth.currentUser) {
             try {
                 await auth.currentUser.delete();
+                console.log('✅ کاربر از Authentication حذف شد');
             } catch (deleteError) {
                 console.error('خطا در حذف کاربر از Authentication:', deleteError);
             }
@@ -1784,6 +1817,7 @@ async function handleRegister(name, email, password, role) {
             errorMessage = 'خطا در اتصال به اینترنت. لطفاً دوباره تلاش کنید.';
         } else if (error.code === 'permission-denied') {
             errorMessage = 'خطا در دسترسی به دیتابیس. لطفاً Security Rules را بررسی کنید.';
+            showSecurityRulesWarning();
         } else {
             errorMessage = `خطا در ثبت‌نام: ${error.message || error.code || 'خطای ناشناخته'}`;
         }
