@@ -1728,8 +1728,33 @@ async function handleRegister(name, email, password, role) {
                     }
                 }
                 
-                showMessage('❌ خطا در ثبت‌نام: Security Rules در Firebase تنظیم نشده است. لطفاً Security Rules را از پیام هشدار کپی کنید و در Firebase Console قرار دهید.', 'error');
+                showMessage('❌ خطا در ثبت‌نام: Security Rules در Firebase تنظیم نشده است. لطفاً Security Rules را از پیام هشدار کپی کنید و در Firebase Console قرار دهید. یا به فایل MANUAL_SETUP_GUIDE.md مراجعه کنید برای راهنمای ایجاد دستی Collection.', 'error');
                 showSecurityRulesWarning();
+                
+                // نمایش راهنمای دستی
+                setTimeout(() => {
+                    const manualGuide = document.createElement('div');
+                    manualGuide.style.cssText = 'background: #e7f3ff; border: 2px solid #2196F3; border-radius: 10px; padding: 20px; margin: 20px; direction: rtl; position: fixed; top: 200px; left: 20px; right: 20px; z-index: 10001; max-width: 800px; margin: 20px auto;';
+                    manualGuide.innerHTML = `
+                        <h3 style="margin: 0 0 10px 0; color: #1976D2;">📖 راهنمای ایجاد دستی Collection</h3>
+                        <p style="margin: 0 0 15px 0; color: #1976D2;">
+                            می‌توانید به صورت دستی Collection "users" را ایجاد کنید:
+                        </p>
+                        <ol style="margin: 0 0 15px 0; padding-right: 20px; color: #1976D2;">
+                            <li>به <a href="https://console.firebase.google.com/project/keyhan-financial/firestore" target="_blank" style="color: #1976D2; font-weight: bold;">Firebase Console > Firestore</a> بروید</li>
+                            <li>روی <strong>Start collection</strong> کلیک کنید</li>
+                            <li>Collection ID: <code>users</code></li>
+                            <li>Document ID: UID کاربر را از <a href="https://console.firebase.google.com/project/keyhan-financial/authentication/users" target="_blank" style="color: #1976D2; font-weight: bold;">Authentication > Users</a> کپی کنید</li>
+                            <li>فیلدها را اضافه کنید: <code>name</code> (string), <code>email</code> (string), <code>role</code> (string: "admin"), <code>approved</code> (boolean: true)</li>
+                            <li>برای راهنمای کامل، فایل <code>MANUAL_SETUP_GUIDE.md</code> را ببینید</li>
+                        </ol>
+                        <button onclick="this.parentElement.remove();" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                            بستن
+                        </button>
+                    `;
+                    document.body.appendChild(manualGuide);
+                }, 500);
+                
                 return;
             }
             
