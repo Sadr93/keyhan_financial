@@ -1554,8 +1554,12 @@ async function handleRegister(name, email, password, role) {
         // خروج خودکار بعد از ثبت‌نام
         await auth.signOut();
         
+        // تنظیم currentUser به null
+        currentUser = null;
+        userRole = null;
+        
         // صبر کردن تا signOut کامل شود
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         // Reset فرم
         document.getElementById('registerForm').reset();
