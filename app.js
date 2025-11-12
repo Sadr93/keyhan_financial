@@ -56,6 +56,11 @@ let useFirebase = false;
 let allTransactions = [];
 let filteredTransactions = [];
 
+// Authentication state
+let currentUser = null;
+let userRole = null;
+let auth = null;
+
 // مقداردهی اولیه
 document.addEventListener('DOMContentLoaded', async function() {
     // بررسی Firebase
@@ -79,10 +84,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('⚠️ Firebase تنظیم نشده - از localStorage استفاده می‌شود');
     }
     
+    // بررسی وضعیت Authentication
+    await checkAuthState();
+    
     initializeDatePicker();
     setupEventListeners();
     setupNavigation();
-    loadTransactions();
+    setupAuthListeners();
+    
+    // اگر کاربر لاگین نیست، نمایش modal ورود
+    if (!currentUser) {
+        showAuthModal();
+    } else {
+        loadTransactions();
+    }
 });
 
 // بررسی اتصال Firestore
@@ -466,6 +481,22 @@ function setupAmountInput() {
 
 // ذخیره تراکنش
 async function saveTransaction(transaction) {
+    // اضافه کردن Audit Log
+    if (currentUser) {
+        transaction.createdBy = currentUser.uid;
+        transaction.createdByName = currentUser.email;
+        if (db) {
+            try {
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    transaction.createdByName = userDoc.data().name || currentUser.email;
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+    }
+    
     if (useFirebase && db) {
         try {
             if (transaction.createdAt === undefined) {
@@ -488,6 +519,23 @@ async function saveTransaction(transaction) {
 
 // بروزرسانی تراکنش
 async function updateTransaction(id, transaction) {
+    // اضافه کردن Audit Log
+    if (currentUser) {
+        transaction.updatedBy = currentUser.uid;
+        transaction.updatedByName = currentUser.email;
+        transaction.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+        if (db) {
+            try {
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    transaction.updatedByName = userDoc.data().name || currentUser.email;
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+    }
+    
     if (useFirebase && db) {
         try {
             await db.collection(COLLECTION_NAME).doc(id).update(transaction);
@@ -508,13 +556,39 @@ async function updateTransaction(id, transaction) {
 
 // حذف تراکنش
 async function deleteTransaction(id) {
+    if (!canDelete()) {
+        showMessage('شما دسترسی حذف تراکنش را ندارید', 'error');
+        return;
+    }
+    
     if (!confirm('آیا مطمئن هستید که می‌خواهید این تراکنش را حذف کنید؟')) {
         return;
     }
     
     try {
         if (useFirebase && db) {
-            await db.collection(COLLECTION_NAME).doc(id).delete();
+            // اضافه کردن Audit Log قبل از حذف
+            if (currentUser) {
+                const deletedBy = currentUser.uid;
+                let deletedByName = currentUser.email;
+                try {
+                    const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                    if (userDoc.exists) {
+                        deletedByName = userDoc.data().name || currentUser.email;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+                // ذخیره اطلاعات حذف در document (soft delete)
+                await db.collection(COLLECTION_NAME).doc(id).update({
+                    deletedBy: deletedBy,
+                    deletedByName: deletedByName,
+                    deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isDeleted: true
+                });
+            } else {
+                await db.collection(COLLECTION_NAME).doc(id).delete();
+            }
         } else {
             const transactions = getLocalStorageTransactions();
             const filtered = transactions.filter(t => t.id != id);
@@ -540,11 +614,15 @@ async function getTransactions() {
             const transactions = [];
             snapshot.forEach(doc => {
                 const data = doc.data();
-                transactions.push({
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt ? data.createdAt.toDate() : new Date()
-                });
+                // فیلتر کردن تراکنش‌های حذف شده (soft delete)
+                if (!data.isDeleted) {
+                    transactions.push({
+                        id: doc.id,
+                        ...data,
+                        createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
+                        updatedAt: data.updatedAt ? data.updatedAt.toDate() : null
+                    });
+                }
             });
             
             return transactions;
@@ -606,8 +684,8 @@ function renderTable() {
                 </label>
             </td>
             <td class="action-buttons-cell">
-                <button class="btn-edit" onclick="editTransaction('${transaction.id}')">ویرایش</button>
-                <button class="btn-delete" onclick="deleteTransaction('${transaction.id}')">حذف</button>
+                ${canEdit() ? `<button class="btn-edit" onclick="editTransaction('${transaction.id}')">ویرایش</button>` : ''}
+                ${canDelete() ? `<button class="btn-delete" onclick="deleteTransaction('${transaction.id}')">حذف</button>` : ''}
             </td>
         </tr>
     `).join('');
@@ -645,6 +723,10 @@ async function toggleAccountingRegistered(transactionId, checked) {
 
 // ویرایش تراکنش
 function editTransaction(id) {
+    if (!canEdit()) {
+        showMessage('شما دسترسی ویرایش تراکنش را ندارید', 'error');
+        return;
+    }
     const transaction = allTransactions.find(t => t.id == id);
     if (transaction) {
         openModal(transaction);
@@ -1245,3 +1327,265 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeReportDatePickers();
     }, 100);
 });
+
+// ==================== Authentication Functions ====================
+
+// بررسی وضعیت Authentication
+async function checkAuthState() {
+    if (!auth) return;
+    
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            currentUser = user;
+            await loadUserRole(user.uid);
+            updateUIForAuth();
+            if (allTransactions.length === 0) {
+                loadTransactions();
+            }
+        } else {
+            currentUser = null;
+            userRole = null;
+            updateUIForAuth();
+            showAuthModal();
+        }
+    });
+}
+
+// بارگذاری نقش کاربر
+async function loadUserRole(userId) {
+    if (!useFirebase || !db) return;
+    
+    try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+            userRole = userDoc.data().role || 'viewer';
+        } else {
+            userRole = 'viewer'; // پیش‌فرض
+        }
+    } catch (error) {
+        console.error('خطا در بارگذاری نقش کاربر:', error);
+        userRole = 'viewer';
+    }
+}
+
+// نمایش Modal ورود
+function showAuthModal() {
+    const authModal = document.getElementById('authModal');
+    if (authModal) {
+        authModal.classList.add('show');
+        document.getElementById('loginForm').classList.add('active');
+        document.getElementById('registerForm').classList.remove('active');
+        document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+        document.querySelector('.auth-tab[data-tab="register"]').classList.remove('active');
+    }
+}
+
+// مخفی کردن Modal ورود
+function hideAuthModal() {
+    const authModal = document.getElementById('authModal');
+    if (authModal) {
+        authModal.classList.remove('show');
+    }
+}
+
+// تنظیم Event Listeners برای Authentication
+function setupAuthListeners() {
+    // Tab switching
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+            
+            // Update tabs
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update forms
+            document.getElementById('loginForm').classList.toggle('active', tabName === 'login');
+            document.getElementById('registerForm').classList.toggle('active', tabName === 'register');
+            
+            // Update title
+            document.getElementById('authModalTitle').textContent = tabName === 'login' ? 'ورود به سیستم' : 'ثبت‌نام';
+        });
+    });
+    
+    // Close modal
+    const closeAuthModal = document.getElementById('closeAuthModal');
+    if (closeAuthModal) {
+        closeAuthModal.addEventListener('click', hideAuthModal);
+    }
+    
+    // Login form
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            await handleLogin(email, password);
+        });
+    }
+    
+    // Register form
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const role = document.getElementById('registerRole').value;
+            await handleRegister(name, email, password, role);
+        });
+    }
+    
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+}
+
+// ورود
+async function handleLogin(email, password) {
+    if (!auth) {
+        showMessage('Firebase Authentication فعال نیست', 'error');
+        return;
+    }
+    
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        showMessage('ورود موفقیت‌آمیز بود', 'success');
+        hideAuthModal();
+        await loadUserRole(userCredential.user.uid);
+        updateUIForAuth();
+        loadTransactions();
+    } catch (error) {
+        console.error('خطا در ورود:', error);
+        let errorMessage = 'خطا در ورود';
+        if (error.code === 'auth/user-not-found') {
+            errorMessage = 'کاربری با این ایمیل یافت نشد';
+        } else if (error.code === 'auth/wrong-password') {
+            errorMessage = 'رمز عبور اشتباه است';
+        } else if (error.code === 'auth/invalid-email') {
+            errorMessage = 'ایمیل نامعتبر است';
+        }
+        showMessage(errorMessage, 'error');
+    }
+}
+
+// ثبت‌نام
+async function handleRegister(name, email, password, role) {
+    if (!auth || !db) {
+        showMessage('Firebase فعال نیست', 'error');
+        return;
+    }
+    
+    try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        
+        // ذخیره اطلاعات کاربر در Firestore
+        await db.collection('users').doc(userCredential.user.uid).set({
+            name: name,
+            email: email,
+            role: role,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showMessage('ثبت‌نام موفقیت‌آمیز بود', 'success');
+        hideAuthModal();
+        await loadUserRole(userCredential.user.uid);
+        updateUIForAuth();
+        loadTransactions();
+    } catch (error) {
+        console.error('خطا در ثبت‌نام:', error);
+        let errorMessage = 'خطا در ثبت‌نام';
+        if (error.code === 'auth/email-already-in-use') {
+            errorMessage = 'این ایمیل قبلاً استفاده شده است';
+        } else if (error.code === 'auth/weak-password') {
+            errorMessage = 'رمز عبور باید حداقل 6 کاراکتر باشد';
+        } else if (error.code === 'auth/invalid-email') {
+            errorMessage = 'ایمیل نامعتبر است';
+        }
+        showMessage(errorMessage, 'error');
+    }
+}
+
+// خروج
+async function handleLogout() {
+    if (!auth) return;
+    
+    try {
+        await auth.signOut();
+        currentUser = null;
+        userRole = null;
+        allTransactions = [];
+        filteredTransactions = [];
+        updateUIForAuth();
+        showAuthModal();
+        showMessage('خروج موفقیت‌آمیز بود', 'success');
+    } catch (error) {
+        console.error('خطا در خروج:', error);
+        showMessage('خطا در خروج', 'error');
+    }
+}
+
+// به‌روزرسانی UI بر اساس Authentication
+function updateUIForAuth() {
+    const userInfo = document.getElementById('userInfo');
+    const userName = document.getElementById('userName');
+    const userRoleSpan = document.getElementById('userRole');
+    const addTransactionBtn = document.getElementById('addTransactionBtn');
+    
+    if (currentUser) {
+        // نمایش اطلاعات کاربر
+        if (userInfo) userInfo.style.display = 'flex';
+        if (userName) {
+            // دریافت نام از Firestore
+            if (db) {
+                db.collection('users').doc(currentUser.uid).get().then(doc => {
+                    if (doc.exists) {
+                        userName.textContent = doc.data().name || currentUser.email;
+                    } else {
+                        userName.textContent = currentUser.email;
+                    }
+                }).catch(() => {
+                    userName.textContent = currentUser.email;
+                });
+            } else {
+                userName.textContent = currentUser.email;
+            }
+        }
+        
+        // نمایش نقش
+        if (userRoleSpan) {
+            const roleNames = {
+                'admin': 'مدیر',
+                'editor': 'ویرایش‌گر',
+                'viewer': 'مشاهده‌گر'
+            };
+            userRoleSpan.textContent = roleNames[userRole] || 'کاربر';
+        }
+        
+        // محدود کردن دسترسی بر اساس نقش
+        if (addTransactionBtn) {
+            if (userRole === 'viewer') {
+                addTransactionBtn.style.display = 'none';
+            } else {
+                addTransactionBtn.style.display = 'block';
+            }
+        }
+    } else {
+        // مخفی کردن اطلاعات کاربر
+        if (userInfo) userInfo.style.display = 'none';
+        if (addTransactionBtn) addTransactionBtn.style.display = 'none';
+    }
+}
+
+// بررسی دسترسی برای عملیات
+function canEdit() {
+    return userRole === 'admin' || userRole === 'editor';
+}
+
+function canDelete() {
+    return userRole === 'admin';
+}

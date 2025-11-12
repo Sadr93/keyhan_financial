@@ -1297,3 +1297,86 @@ textarea::placeholder {
         grid-template-columns: 1fr;
     }
 }
+
+/* استایل‌های Authentication */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-right: 20px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+}
+
+.user-info span {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9em;
+}
+
+.user-role {
+    padding: 4px 8px;
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+    border-radius: var(--radius-sm);
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.btn-logout {
+    padding: 6px 12px;
+    background: rgba(239, 68, 68, 0.2);
+    color: #fff;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s;
+}
+
+.btn-logout:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.7);
+}
+
+.auth-modal {
+    max-width: 450px;
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--border-light);
+}
+
+.auth-tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-medium);
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 500;
+    transition: all 0.2s;
+    margin-bottom: -2px;
+}
+
+.auth-tab:hover {
+    color: var(--text-dark);
+}
+
+.auth-tab.active {
+    color: var(--accent-yellow);
+    border-bottom-color: var(--accent-yellow);
+    font-weight: 600;
+}
+
+.auth-form {
+    display: none;
+}
+
+.auth-form.active {
+    display: block;
+}

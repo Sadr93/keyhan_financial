@@ -22,6 +22,11 @@
                 <nav class="main-nav">
                     <button class="nav-btn active" data-page="transactions">لیست تراکنش‌ها</button>
                     <button class="nav-btn" data-page="reports">گزارشات</button>
+                    <div class="user-info" id="userInfo" style="display: none;">
+                        <span id="userName"></span>
+                        <span id="userRole" class="user-role"></span>
+                        <button id="logoutBtn" class="btn-logout">خروج</button>
+                    </div>
                 </nav>
             </div>
         </header>
@@ -246,12 +251,69 @@
         <div id="message" class="message"></div>
     </div>
 
+    <!-- Modal ورود/ثبت‌نام -->
+    <div id="authModal" class="modal">
+        <div class="modal-content auth-modal">
+            <div class="modal-header">
+                <h2 id="authModalTitle">ورود به سیستم</h2>
+                <button class="modal-close" id="closeAuthModal">&times;</button>
+            </div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">ورود</button>
+                <button class="auth-tab" data-tab="register">ثبت‌نام</button>
+            </div>
+            
+            <!-- فرم ورود -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginEmail">ایمیل:</label>
+                    <input type="email" id="loginEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">رمز عبور:</label>
+                    <input type="password" id="loginPassword" name="password" required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn-submit">ورود</button>
+                </div>
+            </form>
+
+            <!-- فرم ثبت‌نام -->
+            <form id="registerForm" class="auth-form" style="display: none;">
+                <div class="form-group">
+                    <label for="registerName">نام:</label>
+                    <input type="text" id="registerName" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">ایمیل:</label>
+                    <input type="email" id="registerEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">رمز عبور:</label>
+                    <input type="password" id="registerPassword" name="password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="registerRole">نقش:</label>
+                    <select id="registerRole" name="role" required>
+                        <option value="viewer">مشاهده‌گر (فقط مشاهده)</option>
+                        <option value="editor">ویرایش‌گر (مشاهده + اضافه/ویرایش)</option>
+                        <option value="admin">مدیر (دسترسی کامل)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn-submit">ثبت‌نام</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="app.js"></script>
