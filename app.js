@@ -1372,7 +1372,11 @@ function updatePageVisibility() {
     const mainHeader = document.getElementById('mainHeader');
     const mainContent = document.getElementById('mainContent');
     
-    if (currentUser) {
+    // بررسی وضعیت فعلی کاربر
+    const user = auth ? auth.currentUser : null;
+    const isLoggedIn = user !== null && currentUser !== null;
+    
+    if (isLoggedIn) {
         // کاربر لاگین کرده - نمایش محتوای اصلی
         if (authPage) authPage.style.display = 'none';
         if (mainHeader) mainHeader.style.display = 'block';
@@ -1547,13 +1551,27 @@ async function handleRegister(name, email, password, role) {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-                // خروج خودکار بعد از ثبت‌نام
-                await auth.signOut();
-                
-                showMessage('ثبت‌نام موفقیت‌آمیز بود. لطفاً منتظر تایید مدیر بمانید.', 'success');
-                updatePageVisibility();
-                switchAuthTab('login');
-                showPendingApprovalMessage();
+        // خروج خودکار بعد از ثبت‌نام
+        await auth.signOut();
+        
+        // صبر کردن تا signOut کامل شود
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Reset فرم
+        document.getElementById('registerForm').reset();
+        
+        // نمایش پیام موفقیت
+        showMessage('✅ ثبت‌نام با موفقیت انجام شد! لطفاً منتظر تایید مدیر بمانید. بعد از تایید می‌توانید وارد شوید.', 'success');
+        
+        // تغییر به تب ورود
+        switchAuthTab('login');
+        
+        // نمایش پیام در انتظار تایید
+        showPendingApprovalMessage();
+        
+        // اطمینان از اینکه در صفحه ورود هستیم
+        updatePageVisibility();
+        
     } catch (error) {
         console.error('خطا در ثبت‌نام:', error);
         let errorMessage = 'خطا در ثبت‌نام';
@@ -1563,6 +1581,8 @@ async function handleRegister(name, email, password, role) {
             errorMessage = 'رمز عبور باید حداقل 6 کاراکتر باشد';
         } else if (error.code === 'auth/invalid-email') {
             errorMessage = 'ایمیل نامعتبر است';
+        } else if (error.code === 'auth/network-request-failed') {
+            errorMessage = 'خطا در اتصال به اینترنت. لطفاً دوباره تلاش کنید.';
         }
         showMessage(errorMessage, 'error');
     }
