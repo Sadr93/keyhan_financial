@@ -1339,71 +1339,82 @@ textarea::placeholder {
     border-color: rgba(239, 68, 68, 0.7);
 }
 
-/* ==================== Authentication Modal - طراحی حرفه‌ای ==================== */
+/* ==================== Authentication Page - صفحه اصلی ورود/ثبت‌نام ==================== */
 
-.auth-modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    z-index: 3000;
+.auth-page {
+    min-height: 100vh;
+    display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    animation: fadeIn 0.3s ease-out;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: relative;
+    overflow: hidden;
 }
 
-.auth-modal-overlay.show {
-    display: flex;
+.auth-page::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('Keyhan view-04.png') repeat;
+    background-size: 400px 400px;
+    opacity: 0.1;
+    z-index: 0;
 }
 
-.auth-modal-container {
+.auth-page-container {
     background: var(--white);
     border-radius: 24px;
     width: 100%;
-    max-width: 480px;
-    max-height: 90vh;
-    overflow: hidden;
+    max-width: 500px;
+    max-height: 95vh;
+    overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     flex-direction: column;
     position: relative;
+    z-index: 1;
 }
 
-.auth-modal-header {
+.auth-page-header {
     background: linear-gradient(135deg, var(--header-dark) 0%, var(--header-darker) 100%);
-    padding: 32px;
+    padding: 48px 32px;
     text-align: center;
     position: relative;
     color: white;
+    border-radius: 24px 24px 0 0;
 }
 
-.auth-modal-close {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+.auth-logo-section {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: white;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
+    gap: 16px;
 }
 
-.auth-modal-close:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: rotate(90deg);
+.auth-logo {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.auth-page-header h1 {
+    margin: 0;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: white;
+}
+
+.auth-subtitle {
+    margin: 8px 0 0 0;
+    font-size: 0.95em;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 400;
 }
 
 .auth-logo-section {
@@ -1420,19 +1431,6 @@ textarea::placeholder {
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
-.auth-modal-header h2 {
-    margin: 0;
-    font-size: 1.8em;
-    font-weight: 700;
-    color: white;
-}
-
-.auth-subtitle {
-    margin: 8px 0 0 0;
-    font-size: 0.95em;
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 400;
-}
 
 .auth-tabs-container {
     position: relative;
@@ -1724,19 +1722,19 @@ textarea::placeholder {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .auth-modal-container {
+    .auth-page-container {
         max-width: 100%;
         border-radius: 0;
         max-height: 100vh;
     }
     
-    .auth-modal-header {
-        padding: 24px 20px;
+    .auth-page-header {
+        padding: 32px 20px;
     }
     
     .auth-logo {
-        width: 60px;
-        height: 60px;
+        width: 80px;
+        height: 80px;
     }
     
     .auth-form-content {

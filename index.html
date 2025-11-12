@@ -14,7 +14,8 @@
 </head>
 <body>
     <div class="container">
-        <header>
+        <!-- Header - فقط بعد از لاگین نمایش داده می‌شود -->
+        <header id="mainHeader" style="display: none;">
             <div class="header-content">
                 <div class="logo-container">
                     <img src="Keyhan Logo Kit-29.png" alt="کیهان" class="logo-image">
@@ -32,43 +33,207 @@
             </div>
         </header>
 
-        <div class="main-wrapper">
-            <!-- Main Content - لیست تراکنش‌ها -->
-            <main class="main-content" id="transactionsPage">
-            <!-- دکمه ثبت تراکنش جدید -->
-            <div class="action-bar">
-                <button id="addTransactionBtn" class="btn-add">+ ثبت تراکنش جدید</button>
-                <div class="action-buttons">
-                    <button id="exportExcelBtn" class="btn-export">📊 خروجی Excel</button>
+        <!-- صفحه ورود/ثبت‌نام - صفحه اصلی -->
+        <div id="authPage" class="auth-page">
+            <div class="auth-page-container">
+                <div class="auth-page-header">
+                    <div class="auth-logo-section">
+                        <img src="Keyhan Logo Kit-29.png" alt="کیهان" class="auth-logo">
+                        <h1>سیستم مدیریت مالی کیهان</h1>
+                        <p class="auth-subtitle">به سیستم مدیریت مالی خود خوش آمدید</p>
+                    </div>
+                </div>
+                
+                <div class="auth-tabs-container">
+                    <button class="auth-tab active" data-tab="login">
+                        <span class="tab-icon">🔐</span>
+                        <span class="tab-text">ورود</span>
+                    </button>
+                    <button class="auth-tab" data-tab="register">
+                        <span class="tab-icon">✨</span>
+                        <span class="tab-text">ثبت‌نام</span>
+                    </button>
+                </div>
+                
+                <div class="auth-forms-wrapper">
+                    <!-- فرم ورود -->
+                    <form id="loginForm" class="auth-form active">
+                        <div class="auth-form-content">
+                            <div class="form-group">
+                                <label for="loginEmail" class="form-label">
+                                    <span class="label-icon">📧</span>
+                                    <span>ایمیل</span>
+                                </label>
+                                <input 
+                                    type="email" 
+                                    id="loginEmail" 
+                                    name="email" 
+                                    class="form-input" 
+                                    placeholder="example@email.com"
+                                    required
+                                    autocomplete="email"
+                                >
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="loginPassword" class="form-label">
+                                    <span class="label-icon">🔒</span>
+                                    <span>رمز عبور</span>
+                                </label>
+                                <div class="password-input-wrapper">
+                                    <input 
+                                        type="password" 
+                                        id="loginPassword" 
+                                        name="password" 
+                                        class="form-input" 
+                                        placeholder="رمز عبور خود را وارد کنید"
+                                        required
+                                        autocomplete="current-password"
+                                    >
+                                    <button type="button" class="password-toggle" onclick="togglePassword('loginPassword')">
+                                        <span class="eye-icon">👁️</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="auth-submit-btn">
+                                    <span>ورود به سیستم</span>
+                                    <span class="btn-arrow">→</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- فرم ثبت‌نام -->
+                    <form id="registerForm" class="auth-form">
+                        <div class="auth-form-content">
+                            <div class="form-group">
+                                <label for="registerName" class="form-label">
+                                    <span class="label-icon">👤</span>
+                                    <span>نام و نام خانوادگی</span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="registerName" 
+                                    name="name" 
+                                    class="form-input" 
+                                    placeholder="نام خود را وارد کنید"
+                                    required
+                                    autocomplete="name"
+                                >
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="registerEmail" class="form-label">
+                                    <span class="label-icon">📧</span>
+                                    <span>ایمیل</span>
+                                </label>
+                                <input 
+                                    type="email" 
+                                    id="registerEmail" 
+                                    name="email" 
+                                    class="form-input" 
+                                    placeholder="example@email.com"
+                                    required
+                                    autocomplete="email"
+                                >
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="registerPassword" class="form-label">
+                                    <span class="label-icon">🔒</span>
+                                    <span>رمز عبور</span>
+                                    <span class="label-hint">(حداقل 6 کاراکتر)</span>
+                                </label>
+                                <div class="password-input-wrapper">
+                                    <input 
+                                        type="password" 
+                                        id="registerPassword" 
+                                        name="password" 
+                                        class="form-input" 
+                                        placeholder="رمز عبور خود را انتخاب کنید"
+                                        required 
+                                        minlength="6"
+                                        autocomplete="new-password"
+                                    >
+                                    <button type="button" class="password-toggle" onclick="togglePassword('registerPassword')">
+                                        <span class="eye-icon">👁️</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="registerRole" class="form-label">
+                                    <span class="label-icon">🎭</span>
+                                    <span>نقش کاربری</span>
+                                </label>
+                                <select id="registerRole" name="role" class="form-select" required>
+                                    <option value="">انتخاب نقش...</option>
+                                    <option value="viewer">👀 مشاهده‌گر - فقط مشاهده تراکنش‌ها</option>
+                                    <option value="editor">✏️ ویرایش‌گر - مشاهده و ویرایش تراکنش‌ها</option>
+                                    <option value="admin">👑 مدیر - دسترسی کامل</option>
+                                </select>
+                                <p class="form-hint">نقش شما توسط مدیر تایید خواهد شد</p>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="auth-submit-btn">
+                                    <span>ثبت‌نام</span>
+                                    <span class="btn-arrow">→</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="auth-footer">
+                    <p class="auth-footer-text">
+                        <span>🔒</span>
+                        اطلاعات شما امن است
+                    </p>
                 </div>
             </div>
+        </div>
 
-            <!-- لیست تراکنش‌ها -->
-            <section class="transactions-section">
-                <div class="table-container">
-                    <table id="transactionsTable" class="transactions-table">
-                        <thead>
-                            <tr>
-                                <th>شماره تراکنش</th>
-                                <th>تاریخ</th>
-                                <th>دسته</th>
-                                <th>زیردسته</th>
-                                <th class="amount-header">مبلغ (تومان)</th>
-                                <th>توضیحات</th>
-                                <th>ثبت حسابداری</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactionsTableBody">
-                            <tr>
-                                <td colspan="8" class="loading-cell">
-                                    <div class="loading">در حال بارگذاری...</div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <!-- محتوای اصلی - فقط بعد از لاگین نمایش داده می‌شود -->
+        <div id="mainContent" class="main-wrapper" style="display: none;">
+            <!-- Main Content - لیست تراکنش‌ها -->
+            <main class="main-content" id="transactionsPage">
+                <!-- دکمه ثبت تراکنش جدید -->
+                <div class="action-bar">
+                    <button id="addTransactionBtn" class="btn-add">+ ثبت تراکنش جدید</button>
+                    <div class="action-buttons">
+                        <button id="exportExcelBtn" class="btn-export">📊 خروجی Excel</button>
+                    </div>
                 </div>
-            </section>
+
+                <!-- لیست تراکنش‌ها -->
+                <section class="transactions-section">
+                    <div class="table-container">
+                        <table id="transactionsTable" class="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>شماره تراکنش</th>
+                                    <th>تاریخ</th>
+                                    <th>دسته</th>
+                                    <th>زیردسته</th>
+                                    <th class="amount-header">مبلغ (تومان)</th>
+                                    <th>توضیحات</th>
+                                    <th>ثبت حسابداری</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody">
+                                <tr>
+                                    <td colspan="8" class="loading-cell">
+                                        <div class="loading">در حال بارگذاری...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </main>
 
             <!-- صفحه گزارشات -->
@@ -183,66 +348,66 @@
                         </div>
                     </div>
                 </div>
-                    </main>
+            </main>
 
-                    <!-- صفحه مدیریت کاربران -->
-                    <main class="main-content" id="usersPage" style="display: none;">
-                        <div class="users-header">
-                            <h2>مدیریت کاربران</h2>
-                            <p>کاربران در انتظار تایید و کاربران فعال</p>
-                        </div>
-                        
-                        <div class="users-container">
-                            <!-- کاربران در انتظار تایید -->
-                            <div class="users-section">
-                                <h3>کاربران در انتظار تایید</h3>
-                                <div class="table-container">
-                                    <table class="users-table">
-                                        <thead>
-                                            <tr>
-                                                <th>نام</th>
-                                                <th>ایمیل</th>
-                                                <th>نقش</th>
-                                                <th>تاریخ ثبت‌نام</th>
-                                                <th>عملیات</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="pendingUsersTableBody">
-                                            <tr>
-                                                <td colspan="5" class="loading-cell">در حال بارگذاری...</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <!-- کاربران فعال -->
-                            <div class="users-section">
-                                <h3>کاربران فعال</h3>
-                                <div class="table-container">
-                                    <table class="users-table">
-                                        <thead>
-                                            <tr>
-                                                <th>نام</th>
-                                                <th>ایمیل</th>
-                                                <th>نقش</th>
-                                                <th>تاریخ ثبت‌نام</th>
-                                                <th>عملیات</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="activeUsersTableBody">
-                                            <tr>
-                                                <td colspan="5" class="loading-cell">در حال بارگذاری...</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </main>
+            <!-- صفحه مدیریت کاربران -->
+            <main class="main-content" id="usersPage" style="display: none;">
+                <div class="users-header">
+                    <h2>مدیریت کاربران</h2>
+                    <p>کاربران در انتظار تایید و کاربران فعال</p>
                 </div>
+                
+                <div class="users-container">
+                    <!-- کاربران در انتظار تایید -->
+                    <div class="users-section">
+                        <h3>کاربران در انتظار تایید</h3>
+                        <div class="table-container">
+                            <table class="users-table">
+                                <thead>
+                                    <tr>
+                                        <th>نام</th>
+                                        <th>ایمیل</th>
+                                        <th>نقش</th>
+                                        <th>تاریخ ثبت‌نام</th>
+                                        <th>عملیات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pendingUsersTableBody">
+                                    <tr>
+                                        <td colspan="5" class="loading-cell">در حال بارگذاری...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
-                <!-- Modal ثبت/ویرایش تراکنش -->
+                    <!-- کاربران فعال -->
+                    <div class="users-section">
+                        <h3>کاربران فعال</h3>
+                        <div class="table-container">
+                            <table class="users-table">
+                                <thead>
+                                    <tr>
+                                        <th>نام</th>
+                                        <th>ایمیل</th>
+                                        <th>نقش</th>
+                                        <th>تاریخ ثبت‌نام</th>
+                                        <th>عملیات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activeUsersTableBody">
+                                    <tr>
+                                        <td colspan="5" class="loading-cell">در حال بارگذاری...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Modal ثبت/ویرایش تراکنش -->
         <div id="transactionModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -308,176 +473,6 @@
         <div id="message" class="message"></div>
     </div>
 
-    <!-- Modal ورود/ثبت‌نام -->
-    <div id="authModal" class="auth-modal-overlay">
-        <div class="auth-modal-container">
-            <div class="auth-modal-header">
-                <div class="auth-logo-section">
-                    <img src="Keyhan Logo Kit-29.png" alt="کیهان" class="auth-logo">
-                    <h2 id="authModalTitle">خوش آمدید</h2>
-                    <p class="auth-subtitle">به سیستم مدیریت مالی کیهان</p>
-                </div>
-                <button class="auth-modal-close" id="closeAuthModal" aria-label="بستن">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="auth-tabs-container">
-                <button class="auth-tab active" data-tab="login">
-                    <span class="tab-icon">🔐</span>
-                    <span class="tab-text">ورود</span>
-                </button>
-                <button class="auth-tab" data-tab="register">
-                    <span class="tab-icon">✨</span>
-                    <span class="tab-text">ثبت‌نام</span>
-                </button>
-                <div class="auth-tab-indicator"></div>
-            </div>
-            
-            <div class="auth-forms-wrapper">
-                <!-- فرم ورود -->
-                <form id="loginForm" class="auth-form active">
-                    <div class="auth-form-content">
-                        <div class="form-group">
-                            <label for="loginEmail" class="form-label">
-                                <span class="label-icon">📧</span>
-                                <span>ایمیل</span>
-                            </label>
-                            <input 
-                                type="email" 
-                                id="loginEmail" 
-                                name="email" 
-                                class="form-input" 
-                                placeholder="example@email.com"
-                                required
-                                autocomplete="email"
-                            >
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="loginPassword" class="form-label">
-                                <span class="label-icon">🔒</span>
-                                <span>رمز عبور</span>
-                            </label>
-                            <div class="password-input-wrapper">
-                                <input 
-                                    type="password" 
-                                    id="loginPassword" 
-                                    name="password" 
-                                    class="form-input" 
-                                    placeholder="رمز عبور خود را وارد کنید"
-                                    required
-                                    autocomplete="current-password"
-                                >
-                                <button type="button" class="password-toggle" onclick="togglePassword('loginPassword')">
-                                    <span class="eye-icon">👁️</span>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="auth-submit-btn">
-                                <span>ورود به سیستم</span>
-                                <span class="btn-arrow">→</span>
-                            </button>
-                        </div>
-                    </div>
-                </form>
-
-                <!-- فرم ثبت‌نام -->
-                <form id="registerForm" class="auth-form">
-                    <div class="auth-form-content">
-                        <div class="form-group">
-                            <label for="registerName" class="form-label">
-                                <span class="label-icon">👤</span>
-                                <span>نام و نام خانوادگی</span>
-                            </label>
-                            <input 
-                                type="text" 
-                                id="registerName" 
-                                name="name" 
-                                class="form-input" 
-                                placeholder="نام خود را وارد کنید"
-                                required
-                                autocomplete="name"
-                            >
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="registerEmail" class="form-label">
-                                <span class="label-icon">📧</span>
-                                <span>ایمیل</span>
-                            </label>
-                            <input 
-                                type="email" 
-                                id="registerEmail" 
-                                name="email" 
-                                class="form-input" 
-                                placeholder="example@email.com"
-                                required
-                                autocomplete="email"
-                            >
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="registerPassword" class="form-label">
-                                <span class="label-icon">🔒</span>
-                                <span>رمز عبور</span>
-                                <span class="label-hint">(حداقل 6 کاراکتر)</span>
-                            </label>
-                            <div class="password-input-wrapper">
-                                <input 
-                                    type="password" 
-                                    id="registerPassword" 
-                                    name="password" 
-                                    class="form-input" 
-                                    placeholder="رمز عبور خود را انتخاب کنید"
-                                    required 
-                                    minlength="6"
-                                    autocomplete="new-password"
-                                >
-                                <button type="button" class="password-toggle" onclick="togglePassword('registerPassword')">
-                                    <span class="eye-icon">👁️</span>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="registerRole" class="form-label">
-                                <span class="label-icon">🎭</span>
-                                <span>نقش کاربری</span>
-                            </label>
-                            <select id="registerRole" name="role" class="form-select" required>
-                                <option value="">انتخاب نقش...</option>
-                                <option value="viewer">👀 مشاهده‌گر - فقط مشاهده تراکنش‌ها</option>
-                                <option value="editor">✏️ ویرایش‌گر - مشاهده و ویرایش تراکنش‌ها</option>
-                                <option value="admin">👑 مدیر - دسترسی کامل</option>
-                            </select>
-                            <p class="form-hint">نقش شما توسط مدیر تایید خواهد شد</p>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="auth-submit-btn">
-                                <span>ثبت‌نام</span>
-                                <span class="btn-arrow">→</span>
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            
-            <div class="auth-footer">
-                <p class="auth-footer-text">
-                    <span>🔒</span>
-                    اطلاعات شما امن است
-                </p>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -490,4 +485,3 @@
     <script src="app.js"></script>
 </body>
 </html>
-

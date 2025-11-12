@@ -96,12 +96,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupNavigation();
     setupAuthListeners();
     
-    // اگر کاربر لاگین نیست، نمایش modal ورود
-    if (!currentUser) {
-        showAuthModal();
-    } else {
-        loadTransactions();
-    }
+    // نمایش صفحه مناسب بر اساس وضعیت لاگین
+    updatePageVisibility();
 });
 
 // بررسی اتصال Firestore
@@ -1346,13 +1342,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // بررسی وضعیت Authentication
 async function checkAuthState() {
-    if (!auth) return;
+    if (!auth) {
+        // اگر Firebase نیست، صفحه ورود را نمایش بده
+        updatePageVisibility();
+        return;
+    }
     
     auth.onAuthStateChanged(async (user) => {
         if (user) {
             currentUser = user;
             await loadUserRole(user.uid);
             updateUIForAuth();
+            updatePageVisibility();
             if (allTransactions.length === 0) {
                 loadTransactions();
             }
@@ -1360,9 +1361,28 @@ async function checkAuthState() {
             currentUser = null;
             userRole = null;
             updateUIForAuth();
-            showAuthModal();
+            updatePageVisibility();
         }
     });
+}
+
+// به‌روزرسانی نمایش صفحات بر اساس وضعیت لاگین
+function updatePageVisibility() {
+    const authPage = document.getElementById('authPage');
+    const mainHeader = document.getElementById('mainHeader');
+    const mainContent = document.getElementById('mainContent');
+    
+    if (currentUser) {
+        // کاربر لاگین کرده - نمایش محتوای اصلی
+        if (authPage) authPage.style.display = 'none';
+        if (mainHeader) mainHeader.style.display = 'block';
+        if (mainContent) mainContent.style.display = 'block';
+    } else {
+        // کاربر لاگین نکرده - نمایش صفحه ورود
+        if (authPage) authPage.style.display = 'flex';
+        if (mainHeader) mainHeader.style.display = 'none';
+        if (mainContent) mainContent.style.display = 'none';
+    }
 }
 
 // بارگذاری نقش کاربر
@@ -1382,21 +1402,15 @@ async function loadUserRole(userId) {
     }
 }
 
-// نمایش Modal ورود
+// نمایش صفحه ورود (دیگر استفاده نمی‌شود - صفحه همیشه نمایش داده می‌شود)
 function showAuthModal() {
-    const authModal = document.getElementById('authModal');
-    if (authModal) {
-        authModal.classList.add('show');
-        switchAuthTab('login');
-    }
+    updatePageVisibility();
+    switchAuthTab('login');
 }
 
-// مخفی کردن Modal ورود
+// مخفی کردن صفحه ورود (دیگر استفاده نمی‌شود)
 function hideAuthModal() {
-    const authModal = document.getElementById('authModal');
-    if (authModal) {
-        authModal.classList.remove('show');
-    }
+    updatePageVisibility();
 }
 
 // تغییر Tab در Modal ورود
@@ -1413,12 +1427,6 @@ function switchAuthTab(tabName) {
     // Update forms
     document.getElementById('loginForm').classList.toggle('active', tabName === 'login');
     document.getElementById('registerForm').classList.toggle('active', tabName === 'register');
-    
-    // Update title
-    const title = document.getElementById('authModalTitle');
-    if (title) {
-        title.textContent = tabName === 'login' ? 'خوش آمدید' : 'ثبت‌نام';
-    }
 }
 
 // Toggle password visibility
@@ -1439,11 +1447,7 @@ function setupAuthListeners() {
         });
     });
     
-    // Close modal
-    const closeAuthModal = document.getElementById('closeAuthModal');
-    if (closeAuthModal) {
-        closeAuthModal.addEventListener('click', hideAuthModal);
-    }
+    // دیگر دکمه بستن نداریم - صفحه ورود صفحه اصلی است
     
     // Login form
     const loginForm = document.getElementById('loginForm');
@@ -1505,9 +1509,10 @@ async function handleLogin(email, password) {
         }
         
         showMessage('ورود موفقیت‌آمیز بود', 'success');
-        hideAuthModal();
         await loadUserRole(userCredential.user.uid);
         updateUIForAuth();
+        updatePageVisibility();
+        switchPage('transactions');
         loadTransactions();
     } catch (error) {
         console.error('خطا در ورود:', error);
@@ -1542,17 +1547,13 @@ async function handleRegister(name, email, password, role) {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // خروج خودکار بعد از ثبت‌نام
-        await auth.signOut();
-        
-        showMessage('ثبت‌نام موفقیت‌آمیز بود. لطفاً منتظر تایید مدیر بمانید.', 'success');
-        hideAuthModal();
-        
-        // نمایش پیام در انتظار تایید
-        setTimeout(() => {
-            showAuthModal();
-            showPendingApprovalMessage();
-        }, 2000);
+                // خروج خودکار بعد از ثبت‌نام
+                await auth.signOut();
+                
+                showMessage('ثبت‌نام موفقیت‌آمیز بود. لطفاً منتظر تایید مدیر بمانید.', 'success');
+                updatePageVisibility();
+                switchAuthTab('login');
+                showPendingApprovalMessage();
     } catch (error) {
         console.error('خطا در ثبت‌نام:', error);
         let errorMessage = 'خطا در ثبت‌نام';
@@ -1569,11 +1570,11 @@ async function handleRegister(name, email, password, role) {
 
 // نمایش پیام در انتظار تایید
 function showPendingApprovalMessage() {
-    const authModal = document.getElementById('authModal');
-    if (!authModal) return;
+    const authPage = document.getElementById('authPage');
+    if (!authPage) return;
     
     // حذف پیام قبلی اگر وجود دارد
-    const existingMessage = authModal.querySelector('.pending-approval-message');
+    const existingMessage = authPage.querySelector('.pending-approval-message');
     if (existingMessage) {
         existingMessage.remove();
     }
@@ -1586,7 +1587,7 @@ function showPendingApprovalMessage() {
         </p>
     `;
     
-    const authFormsWrapper = authModal.querySelector('.auth-forms-wrapper');
+    const authFormsWrapper = authPage.querySelector('.auth-forms-wrapper');
     if (authFormsWrapper) {
         // حذف پیام قبلی اگر وجود دارد
         const existing = authFormsWrapper.querySelector('.pending-approval-message');
@@ -1601,19 +1602,20 @@ function showPendingApprovalMessage() {
 async function handleLogout() {
     if (!auth) return;
     
-    try {
-        await auth.signOut();
-        currentUser = null;
-        userRole = null;
-        allTransactions = [];
-        filteredTransactions = [];
-        updateUIForAuth();
-        showAuthModal();
-        showMessage('خروج موفقیت‌آمیز بود', 'success');
-    } catch (error) {
-        console.error('خطا در خروج:', error);
-        showMessage('خطا در خروج', 'error');
-    }
+            try {
+                await auth.signOut();
+                currentUser = null;
+                userRole = null;
+                allTransactions = [];
+                filteredTransactions = [];
+                updateUIForAuth();
+                updatePageVisibility();
+                switchAuthTab('login');
+                showMessage('خروج موفقیت‌آمیز بود', 'success');
+            } catch (error) {
+                console.error('خطا در خروج:', error);
+                showMessage('خطا در خروج', 'error');
+            }
 }
 
 // به‌روزرسانی UI بر اساس Authentication
