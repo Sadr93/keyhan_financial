@@ -20,10 +20,16 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Helper function: دریافت نقش کاربر
+    // Helper function: دریافت نقش کاربر (با error handling)
     function getUserRole() {
       let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       return userData != null && userData.role != null ? userData.role : 'viewer';
+    }
+    
+    // Helper function: بررسی اینکه کاربر admin است (با error handling)
+    function isAdmin() {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userData != null && userData.role == 'admin' && userData.approved == true;
     }
     
     // Helper function: بررسی اینکه کاربر تایید شده است
@@ -51,11 +57,11 @@ service cloud.firestore {
         // کاربر می‌تواند خودش را approve کند (اگر هنوز approve نشده)
         (request.auth.uid == userId && !resource.data.approved && request.resource.data.approved == true) ||
         // یا admin می‌تواند کاربران دیگر را ویرایش کند
-        (getUserRole() == 'admin')
+        (isAdmin())
       );
       
       // حذف: فقط admin
-      allow delete: if isSignedIn() && getUserRole() == 'admin';
+      allow delete: if isSignedIn() && isAdmin();
     }
     
     // Collection: transactions
@@ -65,14 +71,14 @@ service cloud.firestore {
       
       // ایجاد تراکنش: editor و admin (باید تایید شده باشند)
       allow create: if isSignedIn() && isUserApproved() && 
-                     (getUserRole() == 'editor' || getUserRole() == 'admin');
+                     (getUserRole() == 'editor' || isAdmin());
       
       // ویرایش تراکنش: editor و admin (باید تایید شده باشند)
       allow update: if isSignedIn() && isUserApproved() && 
-                     (getUserRole() == 'editor' || getUserRole() == 'admin');
+                     (getUserRole() == 'editor' || isAdmin());
       
       // حذف تراکنش: فقط admin (باید تایید شده باشد)
-      allow delete: if isSignedIn() && isUserApproved() && getUserRole() == 'admin';
+      allow delete: if isSignedIn() && isUserApproved() && isAdmin();
     }
   }
 }
