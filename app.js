@@ -1,0 +1,1247 @@
+// ساختار دسته‌بندی‌ها
+const categories = {
+    'درآمد': {
+        'اتاق‌ها': [],
+        'میز اختصاصی': [],
+        'میز اشتراکی': ['ماهانه', 'هفتگی', 'روزانه'],
+        'اتاق جلسات': ['رویداد', 'کلاس', 'رزرو'],
+        'اینترنت': [],
+        'سایر': []
+    },
+    'هزینه': {
+        'حقوق و دستمزد': ['پایه حقوق', 'اضافه کار'],
+        'قبوض': ['آب', 'برق', 'اینترنت', 'اجاره'],
+        'مصرفی‌ها': ['دستمال کاغذی', 'شوینده', 'چای و قند'],
+        'اقساط و چک': [],
+        'تعمیر و نگهداری': [],
+        'سایر': []
+    }
+};
+
+// نام collection در Firestore
+const COLLECTION_NAME = 'transactions';
+
+// شمارنده برای تراکنش‌های همزمان در یک دقیقه
+let transactionCounter = 0;
+let lastTransactionMinute = '';
+
+// تولید شماره تراکنش خودکار بر اساس تاریخ و زمان ثبت
+function generateTransactionNumber() {
+    // استفاده از تاریخ و زمان فعلی به هجری شمسی
+    const now = new persianDate();
+    
+    const month = now.month().toString().padStart(2, '0');
+    const day = now.date().toString().padStart(2, '0');
+    const hour = now.hour().toString().padStart(2, '0');
+    const minute = now.minute().toString().padStart(2, '0');
+    
+    // کلید دقیقه فعلی
+    const currentMinute = `${month}${day}${hour}${minute}`;
+    
+    // اگر در همان دقیقه است، شمارنده را افزایش بده
+    if (currentMinute === lastTransactionMinute) {
+        transactionCounter++;
+    } else {
+        // دقیقه جدید، شمارنده را از 1 شروع کن
+        transactionCounter = 1;
+        lastTransactionMinute = currentMinute;
+    }
+    
+    // فرمت: MMDDHHMM + شمارنده (همیشه یک عدد اضافه می‌شود)
+    return `${currentMinute}${transactionCounter}`;
+}
+
+// بررسی اینکه Firebase آماده است یا نه
+let useFirebase = false;
+let allTransactions = [];
+let filteredTransactions = [];
+
+// مقداردهی اولیه
+document.addEventListener('DOMContentLoaded', async function() {
+    // بررسی Firebase
+    if (typeof firebase !== 'undefined' && db) {
+        useFirebase = true;
+        console.log('✅ Firebase آماده است');
+        
+        // بررسی اینکه Firestore فعال است یا نه
+        try {
+            const isConnected = await checkFirestoreConnection();
+            if (!isConnected) {
+                useFirebase = false;
+                console.log('⚠️ استفاده از localStorage به دلیل مشکل Security Rules');
+            }
+        } catch (error) {
+            console.error('⚠️ Firestore فعال نیست:', error);
+            useFirebase = false;
+            showFirestoreWarning();
+        }
+    } else {
+        console.log('⚠️ Firebase تنظیم نشده - از localStorage استفاده می‌شود');
+    }
+    
+    initializeDatePicker();
+    setupEventListeners();
+    setupNavigation();
+    loadTransactions();
+});
+
+// بررسی اتصال Firestore
+async function checkFirestoreConnection() {
+    if (!db) return false;
+    
+    try {
+        const testQuery = db.collection(COLLECTION_NAME).limit(1);
+        await testQuery.get();
+        console.log('✅ Firestore و Security Rules درست تنظیم شده‌اند');
+        return true;
+    } catch (error) {
+        if (error.code === 'permission-denied') {
+            console.warn('⚠️ Firestore فعال است اما Security Rules نیاز به تنظیم دارد');
+            showSecurityRulesWarning();
+            return false;
+        } else if (error.code === 'failed-precondition') {
+            throw new Error('Firestore فعال نیست - لطفاً در Firebase Console فعال کنید');
+        }
+        console.warn('⚠️ خطا در بررسی Firestore:', error);
+        return false;
+    }
+}
+
+// نمایش هشدار Firestore
+function showFirestoreWarning() {
+    const warning = document.createElement('div');
+    warning.className = 'firestore-warning';
+    warning.innerHTML = `
+        <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 20px; margin: 20px; direction: rtl;">
+            <h3 style="margin: 0 0 10px 0; color: #856404;">⚠️ Firestore فعال نیست</h3>
+            <p style="margin: 0 0 15px 0; color: #856404;">
+                برای استفاده از دیتابیس Firebase، لطفاً:
+            </p>
+            <ol style="margin: 0 0 15px 0; padding-right: 20px; color: #856404;">
+                <li>به <a href="https://console.firebase.google.com/project/keyhan-financial/firestore" target="_blank" style="color: #007bff;">Firebase Console</a> بروید</li>
+                <li>روی <strong>Create database</strong> کلیک کنید</li>
+                <li><strong>Start in test mode</strong> را انتخاب کنید</li>
+                <li>Location را انتخاب و <strong>Enable</strong> کنید</li>
+            </ol>
+            <p style="margin: 0; color: #856404; font-size: 0.9em;">
+                تا زمانی که Firestore فعال نشود، داده‌ها در localStorage ذخیره می‌شوند.
+            </p>
+        </div>
+    `;
+    document.body.insertBefore(warning, document.body.firstChild);
+}
+
+// نمایش هشدار Security Rules
+function showSecurityRulesWarning() {
+    if (document.querySelector('.security-rules-warning')) return;
+    
+    const warning = document.createElement('div');
+    warning.className = 'security-rules-warning';
+    warning.innerHTML = `
+        <div style="background: #f8d7da; border: 2px solid #dc3545; border-radius: 10px; padding: 20px; margin: 20px; direction: rtl;">
+            <h3 style="margin: 0 0 10px 0; color: #721c24;">🔒 Security Rules نیاز به تنظیم دارد</h3>
+            <p style="margin: 0 0 15px 0; color: #721c24;">
+                Firestore فعال است اما Security Rules درست تنظیم نشده است. لطفاً:
+            </p>
+            <ol style="margin: 0 0 15px 0; padding-right: 20px; color: #721c24;">
+                <li>به <a href="https://console.firebase.google.com/project/keyhan-financial/firestore/rules" target="_blank" style="color: #007bff; font-weight: bold;">Firebase Console > Firestore > Rules</a> بروید</li>
+                <li>این کد را جایگزین کنید:</li>
+            </ol>
+            <pre style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; direction: ltr; text-align: left; margin: 10px 0;">
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /transactions/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+            <p style="margin: 10px 0 0 0; color: #721c24; font-size: 0.9em;">
+                سپس روی <strong>Publish</strong> کلیک کنید و صفحه را Refresh کنید.
+            </p>
+            <button onclick="this.parentElement.parentElement.remove(); location.reload();" style="margin-top: 15px; padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                بعد از تنظیم Rules، اینجا کلیک کنید
+            </button>
+        </div>
+    `;
+    document.body.insertBefore(warning, document.body.firstChild);
+}
+
+// راه‌اندازی تقویم شمسی (فقط شمسی)
+function initializeDatePicker() {
+    const dateInput = document.getElementById('date');
+    if (!dateInput) return;
+    
+    const today = new persianDate();
+    
+    // حذف datepicker قبلی اگر وجود دارد
+    if ($(dateInput).data('persianDatepicker')) {
+        $(dateInput).persianDatepicker('destroy');
+    }
+    
+    $(dateInput).persianDatepicker({
+        observer: true,
+        format: 'YYYY/MM/DD',
+        initialValue: true,
+        initialValueType: 'persian',
+        calendarType: 'persian',
+        timePicker: {
+            enabled: false
+        },
+        calendar: {
+            persian: {
+                enabled: true
+            },
+            gregorian: {
+                enabled: false
+            }
+        }
+    });
+    
+    dateInput.value = today.format('YYYY/MM/DD');
+}
+
+// تنظیم رویدادها
+function setupEventListeners() {
+    const typeSelect = document.getElementById('type');
+    const categorySelect = document.getElementById('category');
+    const form = document.getElementById('transactionForm');
+    const exportBtn = document.getElementById('exportExcelBtn');
+    const addBtn = document.getElementById('addTransactionBtn');
+    const modal = document.getElementById('transactionModal');
+    const closeModal = document.getElementById('closeModal');
+    const cancelBtn = document.getElementById('cancelBtn');
+
+    typeSelect.addEventListener('change', updateCategories);
+    categorySelect.addEventListener('change', updateSubcategories);
+    form.addEventListener('submit', handleFormSubmit);
+    exportBtn.addEventListener('click', exportToExcel);
+    addBtn.addEventListener('click', () => openModal());
+    closeModal.addEventListener('click', () => closeModalFunc());
+    cancelBtn.addEventListener('click', () => closeModalFunc());
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModalFunc();
+    });
+}
+
+// تنظیم ناوبری بین صفحات
+function setupNavigation() {
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    
+    navButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const page = btn.getAttribute('data-page');
+            switchPage(page);
+            
+            // به‌روزرسانی وضعیت دکمه‌ها
+            navButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+    
+    // فیلترهای گزارشات
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const filter = btn.getAttribute('data-filter');
+            filterButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            if (filter === 'custom') {
+                document.getElementById('customDateRange').style.display = 'flex';
+            } else {
+                document.getElementById('customDateRange').style.display = 'none';
+            }
+            
+            loadReports(filter);
+        });
+    });
+}
+
+// جابجایی بین صفحات
+function switchPage(page) {
+    const transactionsPage = document.getElementById('transactionsPage');
+    const reportsPage = document.getElementById('reportsPage');
+    
+    if (page === 'transactions') {
+        transactionsPage.style.display = 'block';
+        reportsPage.style.display = 'none';
+    } else if (page === 'reports') {
+        transactionsPage.style.display = 'none';
+        reportsPage.style.display = 'block';
+        loadReports('all');
+    }
+}
+
+// بروزرسانی دسته‌ها بر اساس نوع
+function updateCategories() {
+    const type = document.getElementById('type').value;
+    const categorySelect = document.getElementById('category');
+    const subcategorySelect = document.getElementById('subcategory');
+    
+    categorySelect.innerHTML = '<option value="">انتخاب کنید...</option>';
+    subcategorySelect.innerHTML = '<option value="">-- بدون زیردسته --</option>';
+    
+    if (type && categories[type]) {
+        Object.keys(categories[type]).forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            categorySelect.appendChild(option);
+        });
+    }
+    
+}
+
+// بروزرسانی زیردسته‌ها بر اساس دسته
+function updateSubcategories() {
+    const type = document.getElementById('type').value;
+    const category = document.getElementById('category').value;
+    const subcategorySelect = document.getElementById('subcategory');
+    
+    subcategorySelect.innerHTML = '<option value="">-- بدون زیردسته --</option>';
+    
+    if (type && category && categories[type] && categories[type][category]) {
+        const subcategories = categories[type][category];
+        if (subcategories.length > 0) {
+            subcategories.forEach(sub => {
+                const option = document.createElement('option');
+                option.value = sub;
+                option.textContent = sub;
+                subcategorySelect.appendChild(option);
+            });
+        }
+    }
+}
+
+// باز کردن Modal
+function openModal(transaction = null) {
+    const modal = document.getElementById('transactionModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const form = document.getElementById('transactionForm');
+    const editId = document.getElementById('editTransactionId');
+    
+    if (transaction) {
+        modalTitle.textContent = 'ویرایش تراکنش';
+        editId.value = transaction.id;
+        document.getElementById('date').value = transaction.date;
+        document.getElementById('type').value = transaction.type;
+        updateCategories();
+        setTimeout(() => {
+            document.getElementById('category').value = transaction.category;
+            updateSubcategories();
+            setTimeout(() => {
+                document.getElementById('subcategory').value = transaction.subcategory || '';
+            }, 100);
+        }, 100);
+        document.getElementById('amount').value = formatNumber(transaction.amount);
+        document.getElementById('description').value = transaction.description || '';
+        document.getElementById('accountingRegistered').checked = transaction.accountingRegistered || false;
+    } else {
+        modalTitle.textContent = 'ثبت تراکنش جدید';
+        editId.value = '';
+        form.reset();
+        document.getElementById('accountingRegistered').checked = false;
+        initializeDatePicker();
+    }
+    
+    modal.classList.add('show');
+}
+
+// بستن Modal
+function closeModalFunc() {
+    const modal = document.getElementById('transactionModal');
+    modal.classList.remove('show');
+}
+
+// مدیریت ارسال فرم
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    const amountInput = document.getElementById('amount');
+    const amountValue = parseAmount(amountInput.value);
+    
+    if (isNaN(amountValue) || amountValue <= 0) {
+        showMessage('لطفاً مبلغ معتبری وارد کنید', 'error');
+        return;
+    }
+    
+    const formData = {
+        date: document.getElementById('date').value,
+        type: document.getElementById('type').value,
+        category: document.getElementById('category').value,
+        subcategory: document.getElementById('subcategory').value || '',
+        amount: amountValue,
+        description: document.getElementById('description').value || '',
+        accountingRegistered: document.getElementById('accountingRegistered').checked || false
+    };
+    
+    // تولید شماره تراکنش فقط برای تراکنش‌های جدید
+    const editId = document.getElementById('editTransactionId').value;
+    if (!editId) {
+        formData.transactionNumber = generateTransactionNumber();
+    }
+    
+    try {
+        if (editId) {
+            await updateTransaction(editId, formData);
+            showMessage('تراکنش با موفقیت ویرایش شد!', 'success');
+        } else {
+            await saveTransaction(formData);
+            showMessage('تراکنش با موفقیت ثبت شد!', 'success');
+        }
+        
+        closeModalFunc();
+        loadTransactions();
+    } catch (error) {
+        console.error('خطا در ثبت تراکنش:', error);
+        showMessage('خطا در ثبت تراکنش. لطفاً دوباره تلاش کنید.', 'error');
+    }
+}
+
+// تبدیل مبلغ به عدد (پشتیبانی از فارسی و انگلیسی)
+function parseAmount(value) {
+    if (!value) return 0;
+    
+    // تبدیل اعداد فارسی به انگلیسی
+    const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    
+    let cleaned = value.toString().replace(/,/g, '').trim();
+    
+    persianNumbers.forEach((persian, index) => {
+        cleaned = cleaned.replace(new RegExp(persian, 'g'), englishNumbers[index]);
+    });
+    
+    return parseInt(cleaned) || 0;
+}
+
+// تبدیل اعداد انگلیسی به فارسی
+function toPersianNumbers(str) {
+    const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    
+    let result = str.toString();
+    englishNumbers.forEach((eng, index) => {
+        result = result.replace(new RegExp(eng, 'g'), persianNumbers[index]);
+    });
+    return result;
+}
+
+// فرمت کردن عدد با جدا کردن ارقام و تبدیل به فارسی
+function formatNumber(num) {
+    const formatted = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return toPersianNumbers(formatted);
+}
+
+// مدیریت ورود مبلغ (جدا کردن ارقام)
+function setupAmountInput() {
+    const amountInput = document.getElementById('amount');
+    
+    amountInput.addEventListener('input', function(e) {
+        let value = e.target.value;
+        
+        // حذف کاماها
+        value = value.replace(/,/g, '');
+        
+        // تبدیل فارسی به انگلیسی
+        const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+        const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        
+        persianNumbers.forEach((persian, index) => {
+            value = value.replace(new RegExp(persian, 'g'), englishNumbers[index]);
+        });
+        
+        // فقط اعداد
+        value = value.replace(/[^\d]/g, '');
+        
+        // جدا کردن ارقام
+        if (value) {
+            value = formatNumber(value);
+        }
+        
+        e.target.value = value;
+    });
+}
+
+// ذخیره تراکنش
+async function saveTransaction(transaction) {
+    if (useFirebase && db) {
+        try {
+            if (transaction.createdAt === undefined) {
+                transaction.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            }
+            await db.collection(COLLECTION_NAME).add(transaction);
+            return;
+        } catch (error) {
+            console.error('خطا در ذخیره Firebase:', error);
+            throw error;
+        }
+    } else {
+        const transactions = getLocalStorageTransactions();
+        transaction.id = Date.now();
+        transaction.createdAt = new Date();
+        transactions.push(transaction);
+        localStorage.setItem('keyhan_financial_transactions', JSON.stringify(transactions));
+    }
+}
+
+// بروزرسانی تراکنش
+async function updateTransaction(id, transaction) {
+    if (useFirebase && db) {
+        try {
+            await db.collection(COLLECTION_NAME).doc(id).update(transaction);
+            return;
+        } catch (error) {
+            console.error('خطا در بروزرسانی Firebase:', error);
+            throw error;
+        }
+    } else {
+        const transactions = getLocalStorageTransactions();
+        const index = transactions.findIndex(t => t.id == id);
+        if (index !== -1) {
+            transactions[index] = { ...transactions[index], ...transaction };
+            localStorage.setItem('keyhan_financial_transactions', JSON.stringify(transactions));
+        }
+    }
+}
+
+// حذف تراکنش
+async function deleteTransaction(id) {
+    if (!confirm('آیا مطمئن هستید که می‌خواهید این تراکنش را حذف کنید؟')) {
+        return;
+    }
+    
+    try {
+        if (useFirebase && db) {
+            await db.collection(COLLECTION_NAME).doc(id).delete();
+        } else {
+            const transactions = getLocalStorageTransactions();
+            const filtered = transactions.filter(t => t.id != id);
+            localStorage.setItem('keyhan_financial_transactions', JSON.stringify(filtered));
+        }
+        
+        showMessage('تراکنش با موفقیت حذف شد!', 'success');
+        loadTransactions();
+    } catch (error) {
+        console.error('خطا در حذف تراکنش:', error);
+        showMessage('خطا در حذف تراکنش. لطفاً دوباره تلاش کنید.', 'error');
+    }
+}
+
+// دریافت تمام تراکنش‌ها
+async function getTransactions() {
+    if (useFirebase && db) {
+        try {
+            const snapshot = await db.collection(COLLECTION_NAME)
+                .orderBy('createdAt', 'desc')
+                .get();
+            
+            const transactions = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                transactions.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt ? data.createdAt.toDate() : new Date()
+                });
+            });
+            
+            return transactions;
+        } catch (error) {
+            console.error('خطا در خواندن Firebase:', error);
+            return getLocalStorageTransactions();
+        }
+    } else {
+        return getLocalStorageTransactions();
+    }
+}
+
+// دریافت از localStorage
+function getLocalStorageTransactions() {
+    const data = localStorage.getItem('keyhan_financial_transactions');
+    return data ? JSON.parse(data) : [];
+}
+
+// بارگذاری تراکنش‌ها
+async function loadTransactions() {
+    const tbody = document.getElementById('transactionsTableBody');
+    
+    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell"><div class="loading">در حال بارگذاری...</div></td></tr>';
+    
+    try {
+        allTransactions = await getTransactions();
+        filteredTransactions = [...allTransactions];
+        renderTable();
+    } catch (error) {
+        console.error('خطا در بارگذاری تراکنش‌ها:', error);
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">خطا در بارگذاری داده‌ها. لطفاً دوباره تلاش کنید.</td></tr>';
+    }
+}
+
+// رندر کردن جدول
+function renderTable() {
+    const tbody = document.getElementById('transactionsTableBody');
+    
+    if (filteredTransactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">هیچ تراکنشی یافت نشد</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = filteredTransactions.map(transaction => `
+        <tr class="transaction-row ${transaction.type === 'درآمد' ? 'income-row' : 'expense-row'}">
+            <td class="transaction-number-cell">${transaction.transactionNumber ? toPersianNumbers(transaction.transactionNumber) : '-'}</td>
+            <td>${transaction.date}</td>
+            <td>${transaction.category}</td>
+            <td>${transaction.subcategory || '-'}</td>
+            <td class="amount-cell">${formatNumber(transaction.amount)}</td>
+            <td>${transaction.description || '-'}</td>
+            <td class="accounting-checkbox-cell">
+                <label class="checkbox-label-inline">
+                    <input type="checkbox" 
+                           ${transaction.accountingRegistered ? 'checked' : ''} 
+                           onchange="toggleAccountingRegistered('${transaction.id}', this.checked)"
+                           class="accounting-checkbox">
+                    <span class="checkmark"></span>
+                </label>
+            </td>
+            <td class="action-buttons-cell">
+                <button class="btn-edit" onclick="editTransaction('${transaction.id}')">ویرایش</button>
+                <button class="btn-delete" onclick="deleteTransaction('${transaction.id}')">حذف</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// تغییر وضعیت ثبت حسابداری
+async function toggleAccountingRegistered(transactionId, checked) {
+    try {
+        const transaction = allTransactions.find(t => t.id === transactionId);
+        if (!transaction) return;
+        
+        transaction.accountingRegistered = checked;
+        
+        if (useFirebase && db) {
+            await db.collection(COLLECTION_NAME).doc(transactionId).update({
+                accountingRegistered: checked
+            });
+        } else {
+            const transactions = getLocalStorageTransactions();
+            const index = transactions.findIndex(t => t.id === transactionId);
+            if (index !== -1) {
+                transactions[index].accountingRegistered = checked;
+                localStorage.setItem('keyhan_financial_transactions', JSON.stringify(transactions));
+            }
+        }
+        
+        showMessage(checked ? 'ثبت حسابداری فعال شد' : 'ثبت حسابداری غیرفعال شد', 'success');
+    } catch (error) {
+        console.error('خطا در تغییر وضعیت ثبت حسابداری:', error);
+        showMessage('خطا در تغییر وضعیت ثبت حسابداری', 'error');
+        // برگرداندن checkbox به حالت قبل
+        loadTransactions();
+    }
+}
+
+// ویرایش تراکنش
+function editTransaction(id) {
+    const transaction = allTransactions.find(t => t.id == id);
+    if (transaction) {
+        openModal(transaction);
+    }
+}
+
+
+// خروجی به Excel
+async function exportToExcel() {
+    try {
+        const transactions = await getTransactions();
+        
+        if (transactions.length === 0) {
+            showMessage('هیچ تراکنشی برای خروجی وجود ندارد', 'error');
+            return;
+        }
+        
+        const data = [
+            ['شماره تراکنش', 'تاریخ', 'نوع', 'دسته', 'زیردسته', 'مبلغ (تومان)', 'توضیحات', 'ثبت حسابداری']
+        ];
+        
+        transactions.forEach(transaction => {
+            data.push([
+                transaction.transactionNumber || '-',
+                transaction.date,
+                transaction.type,
+                transaction.category,
+                transaction.subcategory || '',
+                transaction.amount,
+                transaction.description || '',
+                transaction.accountingRegistered ? 'بله' : 'خیر'
+            ]);
+        });
+        
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'تراکنش‌ها');
+        
+        const colWidths = [
+            { wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 30 }, { wch: 12 }
+        ];
+        ws['!cols'] = colWidths;
+        
+        const today = new persianDate();
+        const fileName = `تراکنش‌های_کیهان_${today.format('YYYY-MM-DD')}.xlsx`;
+        
+        XLSX.writeFile(wb, fileName);
+        showMessage('فایل Excel با موفقیت دانلود شد!', 'success');
+        
+    } catch (error) {
+        console.error('خطا در خروجی Excel:', error);
+        showMessage('خطا در ساخت فایل Excel. لطفاً دوباره تلاش کنید.', 'error');
+    }
+}
+
+// نمایش پیام
+function showMessage(text, type) {
+    const message = document.getElementById('message');
+    message.textContent = text;
+    message.className = `message ${type}`;
+    
+    setTimeout(() => {
+        message.className = 'message';
+    }, 3000);
+}
+
+// Export functions برای استفاده در onclick
+window.editTransaction = editTransaction;
+window.deleteTransaction = deleteTransaction;
+window.applyCustomDateRange = applyCustomDateRange;
+window.toggleCategory = toggleCategory;
+
+// باز و بسته کردن دسته
+function toggleCategory(categoryId) {
+    const subcategoryRows = document.querySelectorAll(`.subcategory-row[data-parent="${categoryId}"]`);
+    const categoryRow = document.querySelector(`.category-row[data-category-id="${categoryId}"]`);
+    const expandIcon = categoryRow ? categoryRow.querySelector('.expand-icon') : null;
+    const categoryIcon = categoryRow ? categoryRow.querySelector('.category-icon') : null;
+    
+    if (!categoryRow || subcategoryRows.length === 0) return;
+    
+    const isExpanded = subcategoryRows[0].style.display !== 'none';
+    
+    if (isExpanded) {
+        // بستن
+        subcategoryRows.forEach(row => {
+            row.style.display = 'none';
+        });
+        if (expandIcon) {
+            expandIcon.textContent = '▼';
+        }
+        if (categoryIcon) {
+            categoryIcon.textContent = '📂';
+        }
+    } else {
+        // باز کردن
+        subcategoryRows.forEach(row => {
+            row.style.display = 'table-row';
+        });
+        if (expandIcon) {
+            expandIcon.textContent = '▲';
+        }
+        if (categoryIcon) {
+            categoryIcon.textContent = '📂';
+        }
+    }
+}
+
+// متغیرهای نمودار
+let incomeExpenseChart = null;
+let expenseCategoryChart = null;
+let incomeCategoryChart = null;
+let timeSeriesChart = null;
+
+// بارگذاری گزارشات
+async function loadReports(filterType) {
+    try {
+        const transactions = await getTransactions();
+        let filteredData = [...transactions];
+        
+        // فیلتر بر اساس بازه زمانی
+        if (filterType === 'custom') {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (startDate && endDate) {
+                filteredData = transactions.filter(t => {
+                    const dateParts = t.date.split('/');
+                    const dateStr = dateParts.join('/');
+                    return dateStr >= startDate && dateStr <= endDate;
+                });
+            }
+        }
+        
+        // محاسبه خلاصه
+        calculateSummary(filteredData);
+        
+        // رسم نمودارها
+        drawCharts(filteredData);
+        
+        // نمایش جداول
+        renderReportsTables(filteredData);
+        
+    } catch (error) {
+        console.error('خطا در بارگذاری گزارشات:', error);
+    }
+}
+
+// محاسبه خلاصه گزارشات
+function calculateSummary(transactions) {
+    let totalIncome = 0;
+    let totalExpense = 0;
+    let totalCount = transactions.length;
+    
+    transactions.forEach(t => {
+        if (t.type === 'درآمد') {
+            totalIncome += t.amount || 0;
+        } else {
+            totalExpense += t.amount || 0;
+        }
+    });
+    
+    const balance = totalIncome - totalExpense;
+    
+    document.getElementById('totalIncome').textContent = formatNumber(totalIncome);
+    document.getElementById('totalExpense').textContent = formatNumber(totalExpense);
+    document.getElementById('totalBalance').textContent = formatNumber(balance);
+    document.getElementById('totalCount').textContent = toPersianNumbers(totalCount.toString());
+}
+
+// رسم نمودارها
+function drawCharts(transactions) {
+    // نمودار درآمد و هزینه
+    const incomeExpenseCtx = document.getElementById('incomeExpenseChart');
+    if (incomeExpenseCtx) {
+        if (incomeExpenseChart) {
+            incomeExpenseChart.destroy();
+        }
+        
+        const incomeData = transactions.filter(t => t.type === 'درآمد').reduce((sum, t) => sum + (t.amount || 0), 0);
+        const expenseData = transactions.filter(t => t.type === 'هزینه').reduce((sum, t) => sum + (t.amount || 0), 0);
+        
+        incomeExpenseChart = new Chart(incomeExpenseCtx, {
+            type: 'bar',
+            data: {
+                labels: ['درآمد', 'هزینه'],
+                datasets: [{
+                    label: 'مبلغ (تومان)',
+                    data: [incomeData, expenseData],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(239, 68, 68, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(239, 68, 68, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // نمودار دسته‌بندی درآمدها
+    const incomeCategoryCtx = document.getElementById('incomeCategoryChart');
+    if (incomeCategoryCtx) {
+        if (incomeCategoryChart) {
+            incomeCategoryChart.destroy();
+        }
+        
+        const incomeTransactions = transactions.filter(t => t.type === 'درآمد');
+        const categoryData = {};
+        
+        incomeTransactions.forEach(t => {
+            const cat = t.category || 'سایر';
+            categoryData[cat] = (categoryData[cat] || 0) + (t.amount || 0);
+        });
+        
+        const labels = Object.keys(categoryData);
+        const data = Object.values(categoryData);
+        
+        if (labels.length > 0) {
+            incomeCategoryChart = new Chart(incomeCategoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(16, 185, 129, 0.6)',
+                            'rgba(16, 185, 129, 0.4)',
+                            'rgba(16, 185, 129, 0.3)',
+                            'rgba(16, 185, 129, 0.2)',
+                            'rgba(16, 185, 129, 0.1)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // نمودار دسته‌بندی هزینه‌ها
+    const expenseCategoryCtx = document.getElementById('expenseCategoryChart');
+    if (expenseCategoryCtx) {
+        if (expenseCategoryChart) {
+            expenseCategoryChart.destroy();
+        }
+        
+        const expenseTransactions = transactions.filter(t => t.type === 'هزینه');
+        const categoryData = {};
+        
+        expenseTransactions.forEach(t => {
+            const cat = t.category || 'سایر';
+            categoryData[cat] = (categoryData[cat] || 0) + (t.amount || 0);
+        });
+        
+        const labels = Object.keys(categoryData);
+        const data = Object.values(categoryData);
+        
+        if (labels.length > 0) {
+            expenseCategoryChart = new Chart(expenseCategoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(239, 68, 68, 0.6)',
+                            'rgba(239, 68, 68, 0.4)',
+                            'rgba(239, 68, 68, 0.3)',
+                            'rgba(239, 68, 68, 0.2)',
+                            'rgba(239, 68, 68, 0.1)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // نمودار خطی درآمد و هزینه بر محور زمان
+    const timeSeriesCtx = document.getElementById('timeSeriesChart');
+    if (timeSeriesCtx) {
+        if (timeSeriesChart) {
+            timeSeriesChart.destroy();
+        }
+        
+        // گروه‌بندی تراکنش‌ها بر اساس تاریخ
+        const dateData = {};
+        
+        transactions.forEach(t => {
+            const date = t.date;
+            if (!dateData[date]) {
+                dateData[date] = {
+                    income: 0,
+                    expense: 0
+                };
+            }
+            
+            if (t.type === 'درآمد') {
+                dateData[date].income += t.amount || 0;
+            } else {
+                dateData[date].expense += t.amount || 0;
+            }
+        });
+        
+        // مرتب‌سازی بر اساس تاریخ
+        const sortedDates = Object.keys(dateData).sort((a, b) => {
+            const aParts = a.split('/');
+            const bParts = b.split('/');
+            const aDate = new Date(parseInt(aParts[0]), parseInt(aParts[1]) - 1, parseInt(aParts[2]));
+            const bDate = new Date(parseInt(bParts[0]), parseInt(bParts[1]) - 1, parseInt(bParts[2]));
+            return aDate - bDate;
+        });
+        
+        const incomeData = sortedDates.map(date => dateData[date].income);
+        const expenseData = sortedDates.map(date => dateData[date].expense);
+        
+        if (sortedDates.length > 0) {
+            timeSeriesChart = new Chart(timeSeriesCtx, {
+                type: 'line',
+                data: {
+                    labels: sortedDates,
+                    datasets: [
+                        {
+                            label: 'درآمد',
+                            data: incomeData,
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'هزینه',
+                            data: expenseData,
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    }
+}
+
+// نمایش جداول گزارشات به صورت درختی
+function renderReportsTables(transactions) {
+    const incomeTbody = document.getElementById('incomeReportsTableBody');
+    const expenseTbody = document.getElementById('expenseReportsTableBody');
+    
+    if (!incomeTbody || !expenseTbody) return;
+    
+    // جدا کردن درآمدها و هزینه‌ها
+    const incomeTransactions = transactions.filter(t => t.type === 'درآمد');
+    const expenseTransactions = transactions.filter(t => t.type === 'هزینه');
+    
+    // ساختار درختی برای درآمدها
+    const incomeTree = {};
+    incomeTransactions.forEach(t => {
+        const cat = t.category || 'سایر';
+        const subcat = t.subcategory || '';
+        
+        if (!incomeTree[cat]) {
+            incomeTree[cat] = {
+                count: 0,
+                total: 0,
+                subcategories: {}
+            };
+        }
+        
+        incomeTree[cat].count++;
+        incomeTree[cat].total += t.amount || 0;
+        
+        if (subcat) {
+            if (!incomeTree[cat].subcategories[subcat]) {
+                incomeTree[cat].subcategories[subcat] = {
+                    count: 0,
+                    total: 0
+                };
+            }
+            incomeTree[cat].subcategories[subcat].count++;
+            incomeTree[cat].subcategories[subcat].total += t.amount || 0;
+        }
+    });
+    
+    // ساختار درختی برای هزینه‌ها
+    const expenseTree = {};
+    expenseTransactions.forEach(t => {
+        const cat = t.category || 'سایر';
+        const subcat = t.subcategory || '';
+        
+        if (!expenseTree[cat]) {
+            expenseTree[cat] = {
+                count: 0,
+                total: 0,
+                subcategories: {}
+            };
+        }
+        
+        expenseTree[cat].count++;
+        expenseTree[cat].total += t.amount || 0;
+        
+        if (subcat) {
+            if (!expenseTree[cat].subcategories[subcat]) {
+                expenseTree[cat].subcategories[subcat] = {
+                    count: 0,
+                    total: 0
+                };
+            }
+            expenseTree[cat].subcategories[subcat].count++;
+            expenseTree[cat].subcategories[subcat].total += t.amount || 0;
+        }
+    });
+    
+    // رندر کردن جدول درآمدها
+    const incomeRows = Object.keys(incomeTree).map((cat, index) => {
+        const data = incomeTree[cat];
+        const hasSubcategories = Object.keys(data.subcategories).length > 0;
+        const categoryId = `income-cat-${index}`;
+        const subcatRows = Object.keys(data.subcategories).map((subcat, subIndex) => {
+            const subData = data.subcategories[subcat];
+            return `
+                <tr class="subcategory-row subcategory-hidden" data-parent="${categoryId}" style="display: none;">
+                    <td class="tree-cell">
+                        <div class="subcategory-content">
+                            <span class="subcategory-dot"></span>
+                            <span class="subcategory-name">${subcat}</span>
+                        </div>
+                    </td>
+                    <td class="subcategory-count">${toPersianNumbers(subData.count.toString())}</td>
+                    <td class="subcategory-amount">${formatNumber(subData.total)}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        const expandIcon = hasSubcategories ? '<span class="expand-icon">▼</span>' : '';
+        
+        return `
+            <tr class="category-row" data-category-id="${categoryId}" onclick="toggleCategory('${categoryId}')" style="cursor: ${hasSubcategories ? 'pointer' : 'default'}">
+                <td class="category-cell">
+                    <div class="category-header">
+                        <span class="category-icon">${hasSubcategories ? '📂' : '📁'}</span>
+                        <span class="category-name">${cat}</span>
+                        ${expandIcon}
+                    </div>
+                </td>
+                <td class="category-count"><strong>${toPersianNumbers(data.count.toString())}</strong></td>
+                <td class="category-amount"><strong>${formatNumber(data.total)}</strong></td>
+            </tr>
+            ${subcatRows}
+        `;
+    }).join('');
+    
+    incomeTbody.innerHTML = incomeRows || '<tr><td colspan="3" class="empty-state">داده‌ای یافت نشد</td></tr>';
+    
+    // رندر کردن جدول هزینه‌ها
+    const expenseRows = Object.keys(expenseTree).map((cat, index) => {
+        const data = expenseTree[cat];
+        const hasSubcategories = Object.keys(data.subcategories).length > 0;
+        const categoryId = `expense-cat-${index}`;
+        const subcatRows = Object.keys(data.subcategories).map((subcat, subIndex) => {
+            const subData = data.subcategories[subcat];
+            return `
+                <tr class="subcategory-row subcategory-hidden" data-parent="${categoryId}" style="display: none;">
+                    <td class="tree-cell">
+                        <div class="subcategory-content">
+                            <span class="subcategory-dot"></span>
+                            <span class="subcategory-name">${subcat}</span>
+                        </div>
+                    </td>
+                    <td class="subcategory-count">${toPersianNumbers(subData.count.toString())}</td>
+                    <td class="subcategory-amount">${formatNumber(subData.total)}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        const expandIcon = hasSubcategories ? '<span class="expand-icon">▼</span>' : '';
+        
+        return `
+            <tr class="category-row" data-category-id="${categoryId}" onclick="toggleCategory('${categoryId}')" style="cursor: ${hasSubcategories ? 'pointer' : 'default'}">
+                <td class="category-cell">
+                    <div class="category-header">
+                        <span class="category-icon">${hasSubcategories ? '📂' : '📁'}</span>
+                        <span class="category-name">${cat}</span>
+                        ${expandIcon}
+                    </div>
+                </td>
+                <td class="category-count"><strong>${toPersianNumbers(data.count.toString())}</strong></td>
+                <td class="category-amount"><strong>${formatNumber(data.total)}</strong></td>
+            </tr>
+            ${subcatRows}
+        `;
+    }).join('');
+    
+    expenseTbody.innerHTML = expenseRows || '<tr><td colspan="3" class="empty-state">داده‌ای یافت نشد</td></tr>';
+}
+
+// اعمال فیلتر بازه انتخابی
+function applyCustomDateRange() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate || !endDate) {
+        showMessage('لطفاً هر دو تاریخ را انتخاب کنید', 'error');
+        return;
+    }
+    
+    loadReports('custom');
+}
+
+// راه‌اندازی datepicker برای فیلتر بازه
+function initializeReportDatePickers() {
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    
+    if (startDateInput && !$(startDateInput).data('persianDatepicker')) {
+        $(startDateInput).persianDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD',
+            initialValue: false,
+            calendarType: 'persian'
+        });
+    }
+    
+    if (endDateInput && !$(endDateInput).data('persianDatepicker')) {
+        $(endDateInput).persianDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD',
+            initialValue: false,
+            calendarType: 'persian'
+        });
+    }
+}
+
+// تنظیم amount input بعد از لود شدن
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        setupAmountInput();
+        initializeReportDatePickers();
+    }, 100);
+});

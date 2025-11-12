@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سیستم مالی کیهان</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+    <!-- فونت فارسی -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="logo-container">
+                    <img src="Keyhan Logo Kit-29.png" alt="کیهان" class="logo-image">
+                </div>
+                <nav class="main-nav">
+                    <button class="nav-btn active" data-page="transactions">لیست تراکنش‌ها</button>
+                    <button class="nav-btn" data-page="reports">گزارشات</button>
+                </nav>
+            </div>
+        </header>
+
+        <div class="main-wrapper">
+            <!-- Main Content - لیست تراکنش‌ها -->
+            <main class="main-content" id="transactionsPage">
+            <!-- دکمه ثبت تراکنش جدید -->
+            <div class="action-bar">
+                <button id="addTransactionBtn" class="btn-add">+ ثبت تراکنش جدید</button>
+                <div class="action-buttons">
+                    <button id="exportExcelBtn" class="btn-export">📊 خروجی Excel</button>
+                </div>
+            </div>
+
+            <!-- لیست تراکنش‌ها -->
+            <section class="transactions-section">
+                <div class="table-container">
+                    <table id="transactionsTable" class="transactions-table">
+                        <thead>
+                            <tr>
+                                <th>شماره تراکنش</th>
+                                <th>تاریخ</th>
+                                <th>دسته</th>
+                                <th>زیردسته</th>
+                                <th class="amount-header">مبلغ (تومان)</th>
+                                <th>توضیحات</th>
+                                <th>ثبت حسابداری</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTableBody">
+                            <tr>
+                                <td colspan="8" class="loading-cell">
+                                    <div class="loading">در حال بارگذاری...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            </main>
+
+            <!-- صفحه گزارشات -->
+            <main class="main-content" id="reportsPage" style="display: none;">
+                <div class="reports-header">
+                    <h2>گزارشات مالی</h2>
+                    <div class="report-filters">
+                        <button class="filter-btn active" data-filter="all">گزارش کلی</button>
+                        <button class="filter-btn" data-filter="custom">بازه انتخابی</button>
+                    </div>
+                    <div class="custom-date-range" id="customDateRange" style="display: none;">
+                        <input type="text" id="startDate" class="date-input" placeholder="از تاریخ">
+                        <span>تا</span>
+                        <input type="text" id="endDate" class="date-input" placeholder="تا تاریخ">
+                        <button class="btn-apply-filter" onclick="applyCustomDateRange()">اعمال</button>
+                    </div>
+                </div>
+
+                <!-- خلاصه گزارشات -->
+                <div class="summary-cards">
+                    <div class="summary-card income-card">
+                        <div class="card-icon">💰</div>
+                        <div class="card-content">
+                            <h3>کل درآمد</h3>
+                            <p class="card-amount" id="totalIncome">۰</p>
+                        </div>
+                    </div>
+                    <div class="summary-card expense-card">
+                        <div class="card-icon">💸</div>
+                        <div class="card-content">
+                            <h3>کل هزینه</h3>
+                            <p class="card-amount" id="totalExpense">۰</p>
+                        </div>
+                    </div>
+                    <div class="summary-card balance-card">
+                        <div class="card-icon">📊</div>
+                        <div class="card-content">
+                            <h3>طراز مالی</h3>
+                            <p class="card-amount" id="totalBalance">۰</p>
+                        </div>
+                    </div>
+                    <div class="summary-card count-card">
+                        <div class="card-icon">📝</div>
+                        <div class="card-content">
+                            <h3>تعداد تراکنش</h3>
+                            <p class="card-amount" id="totalCount">۰</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- نمودارها -->
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>نمودار درآمد و هزینه</h3>
+                        <canvas id="incomeExpenseChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>نمودار خطی درآمد و هزینه بر محور زمان</h3>
+                        <canvas id="timeSeriesChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>نمودار دسته‌بندی درآمدها</h3>
+                        <canvas id="incomeCategoryChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>نمودار دسته‌بندی هزینه‌ها</h3>
+                        <canvas id="expenseCategoryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- جدول خلاصه -->
+                <div class="reports-tables-container">
+                    <!-- خلاصه درآمدها -->
+                    <div class="reports-table-container income-table">
+                        <h3>خلاصه درآمدها</h3>
+                        <div class="table-container">
+                            <table class="reports-table">
+                                <thead>
+                                    <tr>
+                                        <th>دسته / زیردسته</th>
+                                        <th>تعداد</th>
+                                        <th>جمع مبلغ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="incomeReportsTableBody">
+                                    <tr>
+                                        <td colspan="3" class="loading-cell">در حال بارگذاری...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- خلاصه هزینه‌ها -->
+                    <div class="reports-table-container expense-table">
+                        <h3>خلاصه هزینه‌ها</h3>
+                        <div class="table-container">
+                            <table class="reports-table">
+                                <thead>
+                                    <tr>
+                                        <th>دسته / زیردسته</th>
+                                        <th>تعداد</th>
+                                        <th>جمع مبلغ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenseReportsTableBody">
+                                    <tr>
+                                        <td colspan="3" class="loading-cell">در حال بارگذاری...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Modal ثبت/ویرایش تراکنش -->
+        <div id="transactionModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">ثبت تراکنش جدید</h2>
+                    <button class="modal-close" id="closeModal">&times;</button>
+                </div>
+                <form id="transactionForm">
+                    <input type="hidden" id="editTransactionId">
+                    <div class="form-group">
+                        <label for="date">تاریخ:</label>
+                        <input type="text" id="date" name="date" class="date-input" required readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="type">نوع:</label>
+                        <select id="type" name="type" required>
+                            <option value="">انتخاب کنید...</option>
+                            <option value="درآمد">درآمد</option>
+                            <option value="هزینه">هزینه</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">دسته:</label>
+                        <select id="category" name="category" required>
+                            <option value="">ابتدا نوع را انتخاب کنید</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="subcategory">زیردسته:</label>
+                        <select id="subcategory" name="subcategory">
+                            <option value="">-- بدون زیردسته --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">مبلغ (تومان):</label>
+                        <input type="text" id="amount" name="amount" class="amount-input" required placeholder="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">توضیحات:</label>
+                        <textarea id="description" name="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accountingRegistered" class="checkbox-label">
+                            <input type="checkbox" id="accountingRegistered" name="accountingRegistered">
+                            <span>ثبت حسابداری</span>
+                        </label>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" id="cancelBtn">انصراف</button>
+                        <button type="submit" class="btn-submit">ثبت تراکنش</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- پیام موفقیت/خطا -->
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+
