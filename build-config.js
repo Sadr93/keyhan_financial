@@ -15,7 +15,7 @@ const config = {
   measurementId: process.env.FIREBASE_MEASUREMENT_ID || ''
 };
 
-// ساخت محتوای Firebase config به صورت inline
+// ساخت محتوای Firebase config
 const firebaseConfigScript = `// تنظیمات Firebase - از Netlify Environment Variables
 const FIREBASE_CONFIG = {
   apiKey: "${config.apiKey}",
@@ -27,7 +27,7 @@ const FIREBASE_CONFIG = {
   measurementId: "${config.measurementId}"
 };
 
-// Initialize Firebase (بعد از لود شدن SDK)
+// Initialize Firebase
 let db = null;
 if (typeof firebase !== 'undefined') {
     firebase.initializeApp(FIREBASE_CONFIG);
@@ -57,10 +57,8 @@ if (scriptTagRegex.test(htmlContent)) {
     fs.writeFileSync(htmlPath, htmlContent, 'utf8');
     console.log('✅ Firebase config در HTML inline شد');
   } else {
-    // ساخت firebase-config.js به عنوان fallback
-    const configPath = path.join(__dirname, 'firebase-config.js');
-    fs.writeFileSync(configPath, firebaseConfigScript, 'utf8');
-    console.log('✅ firebase-config.js ساخته شد (fallback)');
+    console.error('❌ خطا: نتوانست script tag را پیدا کنم');
+    process.exit(1);
   }
 }
 
@@ -69,4 +67,3 @@ if (!config.apiKey || !config.projectId) {
   console.warn('⚠️ هشدار: برخی از Environment Variables تنظیم نشده‌اند');
   console.warn('⚠️ سیستم از localStorage استفاده خواهد کرد');
 }
-
