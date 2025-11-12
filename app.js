@@ -1584,16 +1584,34 @@ async function handleRegister(name, email, password, role) {
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         
-        // ذخیره اطلاعات کاربر در Firestore با وضعیت "در انتظار تایید"
+        // بررسی اینکه آیا این اولین کاربر است یا نه
+        const usersSnapshot = await db.collection('users').get();
+        const isFirstUser = usersSnapshot.empty;
+        
+        // اگر اولین کاربر است و نقش admin دارد، به صورت خودکار approve می‌شود
+        const shouldAutoApprove = isFirstUser && role === 'admin';
+        
+        // ذخیره اطلاعات کاربر در Firestore
         await db.collection('users').doc(userCredential.user.uid).set({
             name: name,
             email: email,
             role: role,
-            approved: false, // کاربر تا تایید admin نمی‌تواند وارد شود
+            approved: shouldAutoApprove, // اولین admin به صورت خودکار approve می‌شود
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // خروج خودکار بعد از ثبت‌نام
+        // اگر اولین admin است، اجازه ورود بده
+        if (shouldAutoApprove) {
+            showMessage('✅ ثبت‌نام با موفقیت انجام شد! شما به عنوان اولین مدیر سیستم تایید شدید.', 'success');
+            await loadUserRole(userCredential.user.uid);
+            updateUIForAuth();
+            updatePageVisibility();
+            switchPage('transactions');
+            loadTransactions();
+            return;
+        }
+        
+        // خروج خودکار بعد از ثبت‌نام (برای کاربران عادی)
         await auth.signOut();
         
         // تنظیم currentUser به null
