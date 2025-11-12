@@ -1553,9 +1553,8 @@ function updatePageVisibility() {
     const mainHeader = document.getElementById('mainHeader');
     const mainContent = document.getElementById('mainContent');
     
-    // بررسی وضعیت فعلی کاربر
-    const user = auth ? auth.currentUser : null;
-    const isLoggedIn = user !== null && currentUser !== null;
+    // بررسی وضعیت فعلی کاربر (localStorage)
+    const isLoggedIn = currentUser !== null;
     
     if (isLoggedIn) {
         // کاربر لاگین کرده - نمایش محتوای اصلی
