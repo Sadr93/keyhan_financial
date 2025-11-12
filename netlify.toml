@@ -9,10 +9,11 @@
 # Environment Variables در Netlify Dashboard تنظیم می‌شوند
 # این فایل فقط ساختار را نشان می‌دهد
 
-# Ignore patterns برای جلوگیری از secret scanning
+# تنظیمات برای جلوگیری از secret scanning
+# Firebase config برای client-side apps public است و نباید به عنوان secret تلقی شود
 [build.environment]
-  # این متغیرها public هستند و نباید به عنوان secret تلقی شوند
-  NETLIFY_SECRET_SCAN_IGNORE = "true"
+  # به Netlify بگوییم که این متغیرها را scan نکند (چون public هستند)
+  SECRETS_SCAN_OMIT_KEYS = "FIREBASE_API_KEY,FIREBASE_APP_ID,FIREBASE_AUTH_DOMAIN,FIREBASE_MEASUREMENT_ID,FIREBASE_MESSAGING_SENDER_ID,FIREBASE_PROJECT_ID,FIREBASE_STORAGE_BUCKET"
 
 [[redirects]]
   from = "/*"
