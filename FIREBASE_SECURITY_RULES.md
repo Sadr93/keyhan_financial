@@ -29,8 +29,18 @@ service cloud.firestore {
     match /users/{userId} {
       // کاربران می‌توانند اطلاعات خودشان را بخوانند
       allow read: if isSignedIn() && request.auth.uid == userId;
-      // فقط admin می‌تواند کاربران را ایجاد/ویرایش کند
-      allow write: if isSignedIn() && getUserRole() == 'admin';
+      // همه کاربران لاگین شده می‌توانند لیست کاربران را ببینند (برای admin)
+      allow list: if isSignedIn();
+      
+      // ایجاد: کاربران می‌توانند خودشان را ثبت‌نام کنند (با approved: false)
+      allow create: if isSignedIn() && request.auth.uid == userId && 
+                     request.resource.data.approved == false;
+      
+      // ویرایش: فقط admin می‌تواند کاربران را ویرایش کند (تایید/رد)
+      allow update: if isSignedIn() && getUserRole() == 'admin';
+      
+      // حذف: فقط admin
+      allow delete: if isSignedIn() && getUserRole() == 'admin';
     }
     
     // Collection: transactions
