@@ -1433,6 +1433,23 @@ async function checkAuthState() {
         if (user) {
             // بررسی اینکه کاربر تایید شده است یا نه
             try {
+                // بررسی اتصال Firestore با یک query واقعی (بعد از لاگین)
+                try {
+                    const testQuery = db.collection(COLLECTION_NAME).limit(1);
+                    await testQuery.get();
+                    console.log('✅ Firestore و Security Rules درست تنظیم شده‌اند');
+                    useFirebase = true;
+                } catch (error) {
+                    if (error.code === 'permission-denied') {
+                        console.warn('⚠️ Firestore فعال است اما Security Rules نیاز به تنظیم دارد');
+                        showSecurityRulesWarning();
+                        useFirebase = false;
+                        // اما ادامه می‌دهیم تا کاربر را بررسی کنیم
+                    } else {
+                        throw error;
+                    }
+                }
+                
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 
                 if (!userDoc.exists || !userDoc.data().approved) {
@@ -1456,7 +1473,9 @@ async function checkAuthState() {
             } catch (error) {
                 console.error('خطا در بررسی وضعیت کاربر:', error);
                 // در صورت خطا، خروج و نمایش صفحه ورود
-                await auth.signOut();
+                if (auth.currentUser) {
+                    await auth.signOut();
+                }
                 currentUser = null;
                 userRole = null;
                 updateUIForAuth();
