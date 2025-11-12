@@ -22,6 +22,7 @@
                 <nav class="main-nav">
                     <button class="nav-btn active" data-page="transactions">لیست تراکنش‌ها</button>
                     <button class="nav-btn" data-page="reports">گزارشات</button>
+                    <button class="nav-btn" data-page="users" id="usersNavBtn" style="display: none;">مدیریت کاربران</button>
                     <div class="user-info" id="userInfo" style="display: none;">
                         <span id="userName"></span>
                         <span id="userRole" class="user-role"></span>
@@ -182,10 +183,66 @@
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
+                    </main>
 
-        <!-- Modal ثبت/ویرایش تراکنش -->
+                    <!-- صفحه مدیریت کاربران -->
+                    <main class="main-content" id="usersPage" style="display: none;">
+                        <div class="users-header">
+                            <h2>مدیریت کاربران</h2>
+                            <p>کاربران در انتظار تایید و کاربران فعال</p>
+                        </div>
+                        
+                        <div class="users-container">
+                            <!-- کاربران در انتظار تایید -->
+                            <div class="users-section">
+                                <h3>کاربران در انتظار تایید</h3>
+                                <div class="table-container">
+                                    <table class="users-table">
+                                        <thead>
+                                            <tr>
+                                                <th>نام</th>
+                                                <th>ایمیل</th>
+                                                <th>نقش</th>
+                                                <th>تاریخ ثبت‌نام</th>
+                                                <th>عملیات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="pendingUsersTableBody">
+                                            <tr>
+                                                <td colspan="5" class="loading-cell">در حال بارگذاری...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- کاربران فعال -->
+                            <div class="users-section">
+                                <h3>کاربران فعال</h3>
+                                <div class="table-container">
+                                    <table class="users-table">
+                                        <thead>
+                                            <tr>
+                                                <th>نام</th>
+                                                <th>ایمیل</th>
+                                                <th>نقش</th>
+                                                <th>تاریخ ثبت‌نام</th>
+                                                <th>عملیات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="activeUsersTableBody">
+                                            <tr>
+                                                <td colspan="5" class="loading-cell">در حال بارگذاری...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+
+                <!-- Modal ثبت/ویرایش تراکنش -->
         <div id="transactionModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">

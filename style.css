@@ -1380,3 +1380,115 @@ textarea::placeholder {
 .auth-form.active {
     display: block;
 }
+
+/* استایل‌های صفحه مدیریت کاربران */
+.users-header {
+    margin-bottom: 32px;
+    padding: 24px;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.users-header h2 {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+.users-header p {
+    color: var(--text-medium);
+    font-size: 0.95em;
+}
+
+.users-container {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.users-section {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.users-section h3 {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-light);
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.users-table thead {
+    background: linear-gradient(135deg, rgba(250, 250, 250, 0.8) 0%, rgba(245, 245, 245, 0.6) 100%);
+    border-bottom: 2px solid var(--border-light);
+}
+
+.users-table th {
+    padding: 14px 16px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-dark);
+    font-size: 0.95em;
+}
+
+.users-table td {
+    padding: 14px 16px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-medium);
+}
+
+.users-table tbody tr:hover {
+    background: rgba(255, 215, 0, 0.05);
+}
+
+.btn-approve {
+    padding: 6px 16px;
+    background: var(--success-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 500;
+    margin-left: 8px;
+    transition: all 0.2s;
+}
+
+.btn-approve:hover {
+    background: #059669;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-reject {
+    padding: 6px 16px;
+    background: var(--error-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btn-reject:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}

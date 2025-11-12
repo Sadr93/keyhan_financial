@@ -277,14 +277,24 @@ function setupNavigation() {
 function switchPage(page) {
     const transactionsPage = document.getElementById('transactionsPage');
     const reportsPage = document.getElementById('reportsPage');
+    const usersPage = document.getElementById('usersPage');
     
     if (page === 'transactions') {
         transactionsPage.style.display = 'block';
         reportsPage.style.display = 'none';
+        if (usersPage) usersPage.style.display = 'none';
     } else if (page === 'reports') {
         transactionsPage.style.display = 'none';
         reportsPage.style.display = 'block';
+        if (usersPage) usersPage.style.display = 'none';
         loadReports('all');
+    } else if (page === 'users') {
+        transactionsPage.style.display = 'none';
+        reportsPage.style.display = 'none';
+        if (usersPage) {
+            usersPage.style.display = 'block';
+            loadUsers();
+        }
     }
 }
 
@@ -1447,13 +1457,32 @@ function setupAuthListeners() {
 
 // ورود
 async function handleLogin(email, password) {
-    if (!auth) {
+    if (!auth || !db) {
         showMessage('Firebase Authentication فعال نیست', 'error');
         return;
     }
     
     try {
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        
+        // بررسی اینکه کاربر تایید شده است یا نه
+        const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
+        
+        if (!userDoc.exists) {
+            await auth.signOut();
+            showMessage('حساب کاربری شما یافت نشد. لطفاً دوباره ثبت‌نام کنید.', 'error');
+            return;
+        }
+        
+        const userData = userDoc.data();
+        
+        if (!userData.approved) {
+            await auth.signOut();
+            showMessage('حساب کاربری شما هنوز تایید نشده است. لطفاً منتظر تایید مدیر بمانید.', 'error');
+            showPendingApprovalMessage();
+            return;
+        }
+        
         showMessage('ورود موفقیت‌آمیز بود', 'success');
         hideAuthModal();
         await loadUserRole(userCredential.user.uid);
@@ -1483,19 +1512,26 @@ async function handleRegister(name, email, password, role) {
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         
-        // ذخیره اطلاعات کاربر در Firestore
+        // ذخیره اطلاعات کاربر در Firestore با وضعیت "در انتظار تایید"
         await db.collection('users').doc(userCredential.user.uid).set({
             name: name,
             email: email,
             role: role,
+            approved: false, // کاربر تا تایید admin نمی‌تواند وارد شود
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        showMessage('ثبت‌نام موفقیت‌آمیز بود', 'success');
+        // خروج خودکار بعد از ثبت‌نام
+        await auth.signOut();
+        
+        showMessage('ثبت‌نام موفقیت‌آمیز بود. لطفاً منتظر تایید مدیر بمانید.', 'success');
         hideAuthModal();
-        await loadUserRole(userCredential.user.uid);
-        updateUIForAuth();
-        loadTransactions();
+        
+        // نمایش پیام در انتظار تایید
+        setTimeout(() => {
+            showAuthModal();
+            showPendingApprovalMessage();
+        }, 2000);
     } catch (error) {
         console.error('خطا در ثبت‌نام:', error);
         let errorMessage = 'خطا در ثبت‌نام';
@@ -1507,6 +1543,26 @@ async function handleRegister(name, email, password, role) {
             errorMessage = 'ایمیل نامعتبر است';
         }
         showMessage(errorMessage, 'error');
+    }
+}
+
+// نمایش پیام در انتظار تایید
+function showPendingApprovalMessage() {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'pending-approval-message';
+    messageDiv.innerHTML = `
+        <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+            <p style="color: #856404; margin: 0; font-weight: 500;">
+                ⏳ حساب کاربری شما در انتظار تایید مدیر است. بعد از تایید می‌توانید وارد شوید.
+            </p>
+        </div>
+    `;
+    const authModal = document.getElementById('authModal');
+    if (authModal) {
+        const modalContent = authModal.querySelector('.modal-content');
+        if (modalContent && !modalContent.querySelector('.pending-approval-message')) {
+            modalContent.insertBefore(messageDiv, modalContent.firstChild);
+        }
     }
 }
 
@@ -1588,4 +1644,157 @@ function canEdit() {
 
 function canDelete() {
     return userRole === 'admin';
+}
+
+// ==================== User Management Functions ====================
+
+// بارگذاری لیست کاربران
+async function loadUsers() {
+    if (!useFirebase || !db || userRole !== 'admin') return;
+    
+    try {
+        const usersSnapshot = await db.collection('users').get();
+        const pendingUsers = [];
+        const activeUsers = [];
+        
+        usersSnapshot.forEach(doc => {
+            const userData = doc.data();
+            const user = {
+                id: doc.id,
+                ...userData,
+                createdAt: userData.createdAt ? userData.createdAt.toDate() : new Date()
+            };
+            
+            if (!userData.approved) {
+                pendingUsers.push(user);
+            } else {
+                activeUsers.push(user);
+            }
+        });
+        
+        renderPendingUsers(pendingUsers);
+        renderActiveUsers(activeUsers);
+    } catch (error) {
+        console.error('خطا در بارگذاری کاربران:', error);
+        showMessage('خطا در بارگذاری کاربران', 'error');
+    }
+}
+
+// رندر کاربران در انتظار تایید
+function renderPendingUsers(users) {
+    const tbody = document.getElementById('pendingUsersTableBody');
+    if (!tbody) return;
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">کاربری در انتظار تایید نیست</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => {
+        const roleNames = {
+            'admin': 'مدیر',
+            'editor': 'ویرایش‌گر',
+            'viewer': 'مشاهده‌گر'
+        };
+        
+        const dateStr = user.createdAt ? new persianDate(user.createdAt).format('YYYY/MM/DD') : '-';
+        
+        return `
+            <tr>
+                <td>${user.name || '-'}</td>
+                <td>${user.email}</td>
+                <td>${roleNames[user.role] || user.role}</td>
+                <td>${dateStr}</td>
+                <td>
+                    <button class="btn-approve" onclick="approveUser('${user.id}')">تایید</button>
+                    <button class="btn-reject" onclick="rejectUser('${user.id}')">رد</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// رندر کاربران فعال
+function renderActiveUsers(users) {
+    const tbody = document.getElementById('activeUsersTableBody');
+    if (!tbody) return;
+    
+    if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">کاربر فعالی وجود ندارد</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => {
+        const roleNames = {
+            'admin': 'مدیر',
+            'editor': 'ویرایش‌گر',
+            'viewer': 'مشاهده‌گر'
+        };
+        
+        const dateStr = user.createdAt ? new persianDate(user.createdAt).format('YYYY/MM/DD') : '-';
+        
+        return `
+            <tr>
+                <td>${user.name || '-'}</td>
+                <td>${user.email}</td>
+                <td>${roleNames[user.role] || user.role}</td>
+                <td>${dateStr}</td>
+                <td>
+                    ${user.id !== currentUser.uid ? `<button class="btn-reject" onclick="rejectUser('${user.id}')">غیرفعال کردن</button>` : '<span style="color: var(--text-medium);">شما</span>'}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// تایید کاربر
+async function approveUser(userId) {
+    if (!canDelete() || !db) {
+        showMessage('شما دسترسی تایید کاربر را ندارید', 'error');
+        return;
+    }
+    
+    if (!confirm('آیا مطمئن هستید که می‌خواهید این کاربر را تایید کنید؟')) {
+        return;
+    }
+    
+    try {
+        await db.collection('users').doc(userId).update({
+            approved: true,
+            approvedBy: currentUser.uid,
+            approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showMessage('کاربر با موفقیت تایید شد', 'success');
+        loadUsers();
+    } catch (error) {
+        console.error('خطا در تایید کاربر:', error);
+        showMessage('خطا در تایید کاربر', 'error');
+    }
+}
+
+// رد یا غیرفعال کردن کاربر
+async function rejectUser(userId) {
+    if (!canDelete() || !db) {
+        showMessage('شما دسترسی رد کاربر را ندارید', 'error');
+        return;
+    }
+    
+    if (!confirm('آیا مطمئن هستید که می‌خواهید این کاربر را رد/غیرفعال کنید؟')) {
+        return;
+    }
+    
+    try {
+        await db.collection('users').doc(userId).update({
+            approved: false,
+            rejectedBy: currentUser.uid,
+            rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showMessage('کاربر با موفقیت رد/غیرفعال شد', 'success');
+        loadUsers();
+    } catch (error) {
+        console.error('خطا در رد کاربر:', error);
+        showMessage('خطا در رد کاربر', 'error');
+    }
 }
