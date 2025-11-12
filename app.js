@@ -56,10 +56,11 @@ let useFirebase = false;
 let allTransactions = [];
 let filteredTransactions = [];
 
-// Authentication state
+// Authentication state - استفاده از localStorage به جای Firebase
 let currentUser = null;
 let userRole = null;
-// auth در firebase-config.js تعریف شده است
+const USERS_STORAGE_KEY = 'keyhan_financial_users';
+const SESSION_STORAGE_KEY = 'keyhan_financial_session';
 
 // مقداردهی اولیه
 document.addEventListener('DOMContentLoaded', async function() {
@@ -88,8 +89,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('⚠️ Firebase تنظیم نشده - از localStorage استفاده می‌شود');
     }
     
-    // بررسی وضعیت Authentication
-    await checkAuthState();
+    // بررسی وضعیت Authentication (localStorage)
+    checkLocalAuthState();
+    
+    // ایجاد کاربر پیش‌فرض admin اگر کاربری وجود ندارد
+    initializeDefaultUsers();
     
     initializeDatePicker();
     setupEventListeners();
@@ -579,18 +583,8 @@ function setupAmountInput() {
 async function saveTransaction(transaction) {
     // اضافه کردن Audit Log
     if (currentUser) {
-        transaction.createdBy = currentUser.uid;
-        transaction.createdByName = currentUser.email;
-        if (db) {
-            try {
-                const userDoc = await db.collection('users').doc(currentUser.uid).get();
-                if (userDoc.exists) {
-                    transaction.createdByName = userDoc.data().name || currentUser.email;
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
+        transaction.createdBy = currentUser.id;
+        transaction.createdByName = currentUser.name || currentUser.email;
     }
     
     if (useFirebase && db) {
@@ -617,19 +611,9 @@ async function saveTransaction(transaction) {
 async function updateTransaction(id, transaction) {
     // اضافه کردن Audit Log
     if (currentUser) {
-        transaction.updatedBy = currentUser.uid;
-        transaction.updatedByName = currentUser.email;
-        transaction.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
-        if (db) {
-            try {
-                const userDoc = await db.collection('users').doc(currentUser.uid).get();
-                if (userDoc.exists) {
-                    transaction.updatedByName = userDoc.data().name || currentUser.email;
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
+        transaction.updatedBy = currentUser.id;
+        transaction.updatedByName = currentUser.name || currentUser.email;
+        transaction.updatedAt = new Date().toISOString();
     }
     
     if (useFirebase && db) {
@@ -665,16 +649,8 @@ async function deleteTransaction(id) {
         if (useFirebase && db) {
             // اضافه کردن Audit Log قبل از حذف
             if (currentUser) {
-                const deletedBy = currentUser.uid;
-                let deletedByName = currentUser.email;
-                try {
-                    const userDoc = await db.collection('users').doc(currentUser.uid).get();
-                    if (userDoc.exists) {
-                        deletedByName = userDoc.data().name || currentUser.email;
-                    }
-                } catch (e) {
-                    // ignore
-                }
+                const deletedBy = currentUser.id;
+                const deletedByName = currentUser.name || currentUser.email;
                 // ذخیره اطلاعات حذف در document (soft delete)
                 await db.collection(COLLECTION_NAME).doc(id).update({
                     deletedBy: deletedBy,
@@ -1424,9 +1400,85 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// ==================== Authentication Functions ====================
+// ==================== Authentication Functions (localStorage) ====================
 
-// بررسی وضعیت Authentication
+// دریافت لیست کاربران از localStorage
+function getLocalUsers() {
+    try {
+        const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+        return usersJson ? JSON.parse(usersJson) : [];
+    } catch (error) {
+        console.error('خطا در خواندن کاربران:', error);
+        return [];
+    }
+}
+
+// ذخیره لیست کاربران در localStorage
+function saveLocalUsers(users) {
+    try {
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    } catch (error) {
+        console.error('خطا در ذخیره کاربران:', error);
+    }
+}
+
+// ایجاد کاربر پیش‌فرض admin
+function initializeDefaultUsers() {
+    const users = getLocalUsers();
+    if (users.length === 0) {
+        // ایجاد کاربر پیش‌فرض admin
+        const defaultUser = {
+            id: 'admin-001',
+            email: 'admin@keyhan.com',
+            password: 'admin123', // کاربر باید این را تغییر دهد
+            name: 'مدیر سیستم',
+            role: 'admin',
+            createdAt: new Date().toISOString()
+        };
+        users.push(defaultUser);
+        saveLocalUsers(users);
+        console.log('✅ کاربر پیش‌فرض admin ایجاد شد');
+        console.log('📧 ایمیل: admin@keyhan.com');
+        console.log('🔒 رمز عبور: admin123');
+        console.log('⚠️ لطفاً بعد از ورود، رمز عبور را تغییر دهید!');
+    }
+}
+
+// بررسی وضعیت لاگین از localStorage
+function checkLocalAuthState() {
+    try {
+        const sessionJson = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (sessionJson) {
+            const session = JSON.parse(sessionJson);
+            const users = getLocalUsers();
+            const user = users.find(u => u.id === session.userId);
+            if (user) {
+                currentUser = {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name
+                };
+                userRole = user.role;
+                console.log('✅ کاربر لاگین شده:', currentUser.email);
+                updateUIForAuth();
+                updatePageVisibility();
+                if (allTransactions.length === 0) {
+                    loadTransactions();
+                }
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('خطا در بررسی وضعیت لاگین:', error);
+    }
+    
+    // اگر لاگین نیست
+    currentUser = null;
+    userRole = null;
+    updatePageVisibility();
+}
+
+// بررسی وضعیت Authentication (قدیمی - دیگر استفاده نمی‌شود)
 async function checkAuthState() {
     if (!auth) {
         // اگر Firebase نیست، صفحه ورود را نمایش بده
@@ -1918,20 +1970,7 @@ function updateUIForAuth() {
         // نمایش اطلاعات کاربر
         if (userInfo) userInfo.style.display = 'flex';
         if (userName) {
-            // دریافت نام از Firestore
-            if (db) {
-                db.collection('users').doc(currentUser.uid).get().then(doc => {
-                    if (doc.exists) {
-                        userName.textContent = doc.data().name || currentUser.email;
-                    } else {
-                        userName.textContent = currentUser.email;
-                    }
-                }).catch(() => {
-                    userName.textContent = currentUser.email;
-                });
-            } else {
-                userName.textContent = currentUser.email;
-            }
+            userName.textContent = currentUser.name || currentUser.email;
         }
         
         // نمایش نقش
