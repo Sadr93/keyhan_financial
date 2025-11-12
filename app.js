@@ -1585,30 +1585,50 @@ async function handleRegister(name, email, password, role) {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         
         // بررسی اینکه آیا این اولین کاربر است یا نه
-        const usersSnapshot = await db.collection('users').get();
-        const isFirstUser = usersSnapshot.empty;
+        let isFirstUser = false;
+        let shouldAutoApprove = false;
         
-        // اگر اولین کاربر است و نقش admin دارد، به صورت خودکار approve می‌شود
-        const shouldAutoApprove = isFirstUser && role === 'admin';
+        try {
+            const usersSnapshot = await db.collection('users').get();
+            isFirstUser = usersSnapshot.empty;
+            shouldAutoApprove = isFirstUser && role === 'admin';
+        } catch (error) {
+            console.warn('خطا در بررسی کاربران موجود:', error);
+            // اگر خطا داد، فرض می‌کنیم که اولین کاربر است
+            isFirstUser = true;
+            shouldAutoApprove = role === 'admin';
+        }
         
-        // ذخیره اطلاعات کاربر در Firestore
+        // ذخیره اطلاعات کاربر در Firestore (همیشه با approved: false شروع می‌کنیم)
         await db.collection('users').doc(userCredential.user.uid).set({
             name: name,
             email: email,
             role: role,
-            approved: shouldAutoApprove, // اولین admin به صورت خودکار approve می‌شود
+            approved: false, // Security Rules اجازه approved: true در create نمی‌دهد
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // اگر اولین admin است، اجازه ورود بده
+        // اگر اولین admin است، خودش را approve می‌کند
         if (shouldAutoApprove) {
-            showMessage('✅ ثبت‌نام با موفقیت انجام شد! شما به عنوان اولین مدیر سیستم تایید شدید.', 'success');
-            await loadUserRole(userCredential.user.uid);
-            updateUIForAuth();
-            updatePageVisibility();
-            switchPage('transactions');
-            loadTransactions();
-            return;
+            try {
+                await db.collection('users').doc(userCredential.user.uid).update({
+                    approved: true,
+                    approvedBy: userCredential.user.uid,
+                    approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                showMessage('✅ ثبت‌نام با موفقیت انجام شد! شما به عنوان اولین مدیر سیستم تایید شدید.', 'success');
+                await loadUserRole(userCredential.user.uid);
+                updateUIForAuth();
+                updatePageVisibility();
+                switchPage('transactions');
+                loadTransactions();
+                return;
+            } catch (updateError) {
+                console.error('خطا در approve کردن اولین admin:', updateError);
+                // اگر update خطا داد، کاربر باید منتظر بماند
+                showMessage('⚠️ ثبت‌نام انجام شد اما تایید خودکار با خطا مواجه شد. لطفاً منتظر تایید مدیر بمانید.', 'error');
+            }
         }
         
         // خروج خودکار بعد از ثبت‌نام (برای کاربران عادی)
@@ -1638,6 +1658,16 @@ async function handleRegister(name, email, password, role) {
         
     } catch (error) {
         console.error('خطا در ثبت‌نام:', error);
+        
+        // اگر کاربر در Authentication ایجاد شد اما در Firestore خطا داد، کاربر را حذف کن
+        if (auth && auth.currentUser) {
+            try {
+                await auth.currentUser.delete();
+            } catch (deleteError) {
+                console.error('خطا در حذف کاربر از Authentication:', deleteError);
+            }
+        }
+        
         let errorMessage = 'خطا در ثبت‌نام';
         if (error.code === 'auth/email-already-in-use') {
             errorMessage = 'این ایمیل قبلاً استفاده شده است';
@@ -1647,6 +1677,10 @@ async function handleRegister(name, email, password, role) {
             errorMessage = 'ایمیل نامعتبر است';
         } else if (error.code === 'auth/network-request-failed') {
             errorMessage = 'خطا در اتصال به اینترنت. لطفاً دوباره تلاش کنید.';
+        } else if (error.code === 'permission-denied') {
+            errorMessage = 'خطا در دسترسی به دیتابیس. لطفاً Security Rules را بررسی کنید.';
+        } else {
+            errorMessage = `خطا در ثبت‌نام: ${error.message || error.code || 'خطای ناشناخته'}`;
         }
         showMessage(errorMessage, 'error');
     }
