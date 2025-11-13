@@ -655,13 +655,17 @@ async function deleteTransaction(id) {
 // دریافت تمام تراکنش‌ها
 async function getTransactions() {
     if (!db) {
+        console.error('❌ Firebase Firestore تنظیم نشده است');
         throw new Error('Firebase Firestore تنظیم نشده است. لطفاً Firebase را تنظیم کنید.');
     }
     
     try {
+        console.log('🔵 در حال خواندن تراکنش‌ها از Firebase...');
         const snapshot = await db.collection(COLLECTION_NAME)
             .orderBy('createdAt', 'desc')
             .get();
+        
+        console.log('✅ تعداد تراکنش‌ها از Firebase:', snapshot.size);
         
         const transactions = [];
         snapshot.forEach(doc => {
@@ -677,9 +681,22 @@ async function getTransactions() {
             }
         });
         
+        console.log('✅ تعداد تراکنش‌های فعال:', transactions.length);
         return transactions;
     } catch (error) {
-        console.error('خطا در خواندن Firebase:', error);
+        console.error('❌ خطا در خواندن Firebase:', error);
+        console.error('❌ کد خطا:', error.code);
+        console.error('❌ پیام خطا:', error.message);
+        
+        // نمایش پیام واضح‌تر
+        if (error.code === 'permission-denied') {
+            throw new Error('خطا در دسترسی به Firebase. لطفاً Security Rules را بررسی کنید.');
+        } else if (error.code === 'failed-precondition') {
+            throw new Error('Firestore فعال نیست. لطفاً در Firebase Console فعال کنید.');
+        } else if (error.code === 'unavailable') {
+            throw new Error('Firebase در دسترس نیست. لطفاً اتصال اینترنت را بررسی کنید.');
+        }
+        
         throw error;
     }
 }
@@ -687,6 +704,7 @@ async function getTransactions() {
 // بارگذاری تراکنش‌ها
 async function loadTransactions() {
     const tbody = document.getElementById('transactionsTableBody');
+    if (!tbody) return;
     
     tbody.innerHTML = '<tr><td colspan="8" class="loading-cell"><div class="loading">در حال بارگذاری...</div></td></tr>';
     
@@ -695,8 +713,26 @@ async function loadTransactions() {
         filteredTransactions = [...allTransactions];
         renderTable();
     } catch (error) {
-        console.error('خطا در بارگذاری تراکنش‌ها:', error);
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">خطا در بارگذاری داده‌ها. لطفاً دوباره تلاش کنید.</td></tr>';
+        console.error('❌ خطا در بارگذاری تراکنش‌ها:', error);
+        console.error('❌ جزئیات خطا:', error);
+        
+        let errorMessage = 'خطا در بارگذاری داده‌ها';
+        if (error.message) {
+            errorMessage = error.message;
+        } else if (error.code === 'permission-denied') {
+            errorMessage = 'خطا در دسترسی به Firebase. لطفاً Security Rules را بررسی کنید.';
+        } else if (error.code === 'failed-precondition') {
+            errorMessage = 'Firestore فعال نیست. لطفاً در Firebase Console فعال کنید.';
+        }
+        
+        tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color: #dc3545; padding: 20px;">
+            <div style="text-align: center;">
+                <p style="font-weight: bold; margin-bottom: 10px;">❌ ${errorMessage}</p>
+                <p style="font-size: 0.9em; color: #666;">لطفاً Console مرورگر (F12) را باز کنید و خطاها را بررسی کنید.</p>
+            </div>
+        </td></tr>`;
+        
+        showMessage(errorMessage, 'error');
     }
 }
 
