@@ -5,12 +5,12 @@
 }
 
 :root {
-    /* رنگ‌های اصلی بر اساس Figma */
+    /* رنگ‌های اصلی بر اساس طراحی کارتی */
     --header-dark: #1a1a1a;
     --header-darker: #0f0f0f;
     --sidebar-bg: #f5f5f5;
     --sidebar-accent: #FFD700;
-    --main-bg: #fafafa;
+    --main-bg: #f5f5f5;
     --white: #ffffff;
     --text-dark: #1a1a1a;
     --text-medium: #4a4a4a;
@@ -23,12 +23,16 @@
     --expense-color: #ef4444;
     --accent-yellow: #FFD700;
     --accent-yellow-dark: #FFC700;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --radius-sm: 6px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
+    /* سایه‌های ظریف برای کارت‌ها */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.12);
+    --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.15);
+    /* گوشه‌های گرد بیشتر */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
 }
 
 body {
@@ -133,6 +137,7 @@ header h1 {
     padding: 32px;
     background: var(--main-bg);
     overflow-y: auto;
+    min-height: calc(100vh - 70px);
 }
 
 /* Action Bar */
@@ -146,15 +151,15 @@ header h1 {
 }
 
 .btn-add {
-    padding: 12px 24px;
+    padding: 14px 28px;
     background: var(--accent-yellow);
     color: var(--text-dark);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     font-size: 1em;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     font-family: 'Vazirmatn', sans-serif;
     box-shadow: var(--shadow-sm);
 }
@@ -162,7 +167,7 @@ header h1 {
 .btn-add:hover {
     background: var(--accent-yellow-dark);
     box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
 }
 
 .action-buttons {
@@ -171,32 +176,36 @@ header h1 {
 }
 
 .btn-export, .btn-refresh {
-    padding: 10px 20px;
+    padding: 12px 24px;
     background: var(--white);
     color: var(--text-dark);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     font-size: 0.9em;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     font-family: 'Vazirmatn', sans-serif;
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-export:hover, .btn-refresh:hover {
     background: var(--sidebar-bg);
     border-color: var(--accent-yellow);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .search-input {
     min-width: 250px;
-    padding: 10px 14px;
+    padding: 12px 16px;
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     font-size: 0.9em;
     font-family: 'Vazirmatn', sans-serif;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     background: var(--white);
     color: var(--text-dark);
+    box-shadow: var(--shadow-sm);
 }
 
 .search-input:focus {
@@ -213,10 +222,11 @@ header h1 {
 /* Table */
 .table-container {
     background: var(--white);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    border: none;
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-md);
+    padding: 0;
 }
 
 .transactions-table {
@@ -228,8 +238,8 @@ header h1 {
 }
 
 .transactions-table thead {
-    background: var(--sidebar-bg);
-    border-bottom: 2px solid var(--border-color);
+    background: #fafafa;
+    border-bottom: 2px solid var(--border-light);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -392,16 +402,17 @@ header h1 {
 }
 
 .btn-edit, .btn-delete {
-    padding: 6px 14px;
+    padding: 8px 16px;
     background: white;
     border: 1px solid;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     font-size: 0.85em;
     font-weight: 500;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     font-family: 'Vazirmatn', sans-serif;
     white-space: nowrap;
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-edit {
@@ -411,8 +422,8 @@ header h1 {
 
 .btn-edit:hover {
     background: var(--accent-yellow);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-delete {
@@ -423,8 +434,8 @@ header h1 {
 .btn-delete:hover {
     background: var(--error-color);
     color: white;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .loading-cell {
@@ -472,7 +483,7 @@ header h1 {
 
 .modal-content {
     background: var(--white);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
     width: 90%;
     max-width: 600px;
     max-height: 90vh;
@@ -480,7 +491,7 @@ header h1 {
     box-shadow: var(--shadow-xl);
     animation: slideUp 0.3s ease-out;
     direction: rtl;
-    border: 1px solid var(--border-color);
+    border: none;
 }
 
 .modal-header {
@@ -542,14 +553,15 @@ input[type="number"],
 select,
 textarea {
     width: 100%;
-    padding: 12px 14px;
+    padding: 12px 16px;
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     font-size: 0.95em;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     font-family: 'Vazirmatn', sans-serif;
     background: var(--white);
     color: var(--text-dark);
+    box-shadow: var(--shadow-sm);
 }
 
 input:focus,
@@ -557,7 +569,8 @@ select:focus,
 textarea:focus {
     outline: none;
     border-color: var(--accent-yellow);
-    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1), var(--shadow-md);
+    transform: translateY(-1px);
 }
 
 input::placeholder,
@@ -585,15 +598,15 @@ textarea::placeholder {
 }
 
 .btn-submit {
-    padding: 12px 24px;
+    padding: 14px 28px;
     background: var(--accent-yellow);
     color: var(--text-dark);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     font-size: 1em;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     font-family: 'Vazirmatn', sans-serif;
     box-shadow: var(--shadow-sm);
 }
@@ -601,25 +614,28 @@ textarea::placeholder {
 .btn-submit:hover {
     background: var(--accent-yellow-dark);
     box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
 }
 
 .btn-cancel {
-    padding: 12px 24px;
+    padding: 14px 28px;
     background: var(--white);
     color: var(--text-dark);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     font-size: 1em;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     font-family: 'Vazirmatn', sans-serif;
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-cancel:hover {
     background: var(--sidebar-bg);
     border-color: var(--accent-yellow);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 /* Message */
@@ -628,11 +644,13 @@ textarea::placeholder {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    padding: 14px 28px;
-    border-radius: var(--radius-md);
+    padding: 16px 32px;
+    border-radius: var(--radius-xl);
     font-weight: 600;
     z-index: 3000;
     display: none;
+    box-shadow: var(--shadow-lg);
+    border: none;
     animation: slideDown 0.3s;
     font-family: 'Vazirmatn', sans-serif;
     box-shadow: var(--shadow-lg);
@@ -753,12 +771,12 @@ textarea::placeholder {
 
 /* صفحه گزارشات */
 .reports-header {
-    margin-bottom: 40px;
-    padding: 24px;
+    margin-bottom: 32px;
+    padding: 32px;
     background: var(--white);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    border: none;
 }
 
 .reports-header h2 {
@@ -780,20 +798,20 @@ textarea::placeholder {
     background: var(--white);
     border: 2px solid var(--border-light);
     color: var(--text-medium);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     font-size: 0.95em;
     font-weight: 500;
     transition: all 0.3s ease;
     font-family: 'Vazirmatn', sans-serif;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-sm);
 }
 
 .filter-btn:hover {
     border-color: var(--accent-yellow);
     color: var(--text-dark);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .filter-btn.active {
@@ -801,7 +819,7 @@ textarea::placeholder {
     border-color: var(--accent-yellow);
     color: var(--text-dark);
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+    box-shadow: var(--shadow-md);
 }
 
 .custom-date-range {
@@ -809,11 +827,11 @@ textarea::placeholder {
     align-items: center;
     gap: 12px;
     margin-top: 20px;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.6);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-light);
-    backdrop-filter: blur(10px);
+    padding: 24px;
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    border: none;
+    box-shadow: var(--shadow-md);
 }
 
 .custom-date-range input {
@@ -827,21 +845,22 @@ textarea::placeholder {
 }
 
 .btn-apply-filter {
-    padding: 10px 20px;
+    padding: 12px 24px;
     background: var(--accent-yellow);
     color: var(--text-dark);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     font-weight: 600;
     font-family: 'Vazirmatn', sans-serif;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-apply-filter:hover {
     background: var(--accent-yellow-dark);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 /* کارت‌های خلاصه */
@@ -854,10 +873,10 @@ textarea::placeholder {
 
 .summary-card {
     background: var(--white);
-    border-radius: var(--radius-lg);
-    padding: 28px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    box-shadow: var(--shadow-md);
+    border: none;
     display: flex;
     align-items: center;
     gap: 20px;
@@ -878,7 +897,7 @@ textarea::placeholder {
 
 .summary-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-lg);
 }
 
 .summary-card:hover::before {
@@ -959,17 +978,17 @@ textarea::placeholder {
 
 .chart-card {
     background: var(--white);
-    border-radius: var(--radius-lg);
-    padding: 28px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    box-shadow: var(--shadow-md);
+    border: none;
     transition: all 0.3s ease;
     position: relative;
 }
 
 .chart-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
 }
 
 .chart-card h3 {
@@ -1003,15 +1022,15 @@ textarea::placeholder {
 
 .reports-table-container {
     background: var(--white);
-    border-radius: var(--radius-lg);
-    padding: 28px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    box-shadow: var(--shadow-md);
+    border: none;
     transition: all 0.3s ease;
 }
 
 .reports-table-container:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-lg);
 }
 
 .reports-table-container.income-table {
@@ -1307,19 +1326,22 @@ textarea::placeholder {
 }
 
 .btn-logout {
-    padding: 6px 12px;
+    padding: 8px 16px;
     background: rgba(239, 68, 68, 0.2);
     color: #fff;
     border: 1px solid rgba(239, 68, 68, 0.5);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-lg);
     cursor: pointer;
     font-size: 0.85em;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-logout:hover {
     background: rgba(239, 68, 68, 0.3);
     border-color: rgba(239, 68, 68, 0.7);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 /* ==================== Authentication Page - صفحه اصلی ورود/ثبت‌نام ==================== */
@@ -1338,17 +1360,18 @@ textarea::placeholder {
 
 .auth-page-container {
     background: var(--white);
-    border-radius: 24px;
+    border-radius: var(--radius-xl);
     width: 100%;
     max-width: 500px;
     max-height: 95vh;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-xl);
     animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex;
     flex-direction: column;
     position: relative;
     z-index: 1;
     overflow: hidden;
+    border: none;
 }
 
 .auth-page-header {
