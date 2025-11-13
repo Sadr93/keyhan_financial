@@ -1613,7 +1613,7 @@ textarea::placeholder {
 .auth-submit-btn {
     width: 100%;
     padding: 16px 24px;
-    background: linear-gradient(135deg, var(--accent-yellow) 0%, var(--accent-yellow-dark) 100%);
+    background: var(--accent-yellow);
     color: var(--text-dark);
     border: none;
     border-radius: 0;
@@ -1626,7 +1626,7 @@ textarea::placeholder {
     gap: 8px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-family: 'Vazirmatn', sans-serif;
-    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+    box-shadow: none;
 }
 
 .auth-submit-btn:hover {
