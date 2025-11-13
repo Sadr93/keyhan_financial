@@ -367,16 +367,12 @@ function setupNavigation() {
 function switchPage(page) {
     const transactionsPage = document.getElementById('transactionsPage');
     const reportsPage = document.getElementById('reportsPage');
-    const usersPage = document.getElementById('usersPage');
-    
     if (page === 'transactions') {
         transactionsPage.style.display = 'block';
         reportsPage.style.display = 'none';
-        if (usersPage) usersPage.style.display = 'none';
     } else if (page === 'reports') {
         transactionsPage.style.display = 'none';
         reportsPage.style.display = 'block';
-        if (usersPage) usersPage.style.display = 'none';
         loadReports('all');
     }
 }
@@ -1937,21 +1933,10 @@ function updateUIForAuth() {
             }
         }
 
-        // نمایش دکمه مدیریت کاربران فقط برای admin
-        const usersNavBtn = document.getElementById('usersNavBtn');
-        if (usersNavBtn) {
-            if (userRole === 'admin') {
-                usersNavBtn.style.display = 'block';
-            } else {
-                usersNavBtn.style.display = 'none';
-            }
-        }
     } else {
         // مخفی کردن اطلاعات کاربر
         if (userInfo) userInfo.style.display = 'none';
         if (addTransactionBtn) addTransactionBtn.style.display = 'none';
-        const usersNavBtn = document.getElementById('usersNavBtn');
-        if (usersNavBtn) usersNavBtn.style.display = 'none';
     }
 }
 
