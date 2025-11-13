@@ -895,7 +895,7 @@ textarea::placeholder {
     position: relative;
 }
 
-.summary-card:first-child {
+.summary-card.income-card {
     border-left: none;
 }
 
