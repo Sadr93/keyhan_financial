@@ -89,11 +89,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('⚠️ Firebase تنظیم نشده - از localStorage استفاده می‌شود');
     }
     
-    // بررسی وضعیت Authentication (localStorage)
-    checkLocalAuthState();
-    
-    // ایجاد کاربر پیش‌فرض admin اگر کاربری وجود ندارد
-    initializeDefaultUsers();
+    // بررسی وضعیت Authentication (Firebase)
+    checkAuthState();
     
     initializeDatePicker();
     setupEventListeners();
@@ -1447,44 +1444,12 @@ function initializeDefaultUsers() {
     }
 }
 
-// بررسی وضعیت لاگین از localStorage
-function checkLocalAuthState() {
-    try {
-        const sessionJson = sessionStorage.getItem(SESSION_STORAGE_KEY);
-        if (sessionJson) {
-            const session = JSON.parse(sessionJson);
-            const users = getLocalUsers();
-            const user = users.find(u => u.id === session.userId);
-            if (user) {
-                currentUser = {
-                    id: user.id,
-                    email: user.email,
-                    name: user.name
-                };
-                userRole = user.role;
-                console.log('✅ کاربر لاگین شده:', currentUser.email);
-                updateUIForAuth();
-                updatePageVisibility();
-                if (allTransactions.length === 0) {
-                    loadTransactions();
-                }
-                return;
-            }
-        }
-    } catch (error) {
-        console.error('خطا در بررسی وضعیت لاگین:', error);
-    }
-    
-    // اگر لاگین نیست
-    currentUser = null;
-    userRole = null;
-    updatePageVisibility();
-}
-
-// بررسی وضعیت Authentication (قدیمی - دیگر استفاده نمی‌شود)
-async function checkAuthState() {
+// بررسی وضعیت Authentication از Firebase
+function checkAuthState() {
     if (!auth) {
-        // اگر Firebase نیست، صفحه ورود را نمایش بده
+        console.log('⚠️ Firebase Authentication فعال نیست');
+        currentUser = null;
+        userRole = null;
         updatePageVisibility();
         return;
     }
@@ -1493,58 +1458,56 @@ async function checkAuthState() {
         if (user) {
             // بررسی اینکه کاربر تایید شده است یا نه
             try {
-                // بررسی اتصال Firestore با یک query واقعی (بعد از لاگین)
-                try {
-                    const testQuery = db.collection(COLLECTION_NAME).limit(1);
-                    await testQuery.get();
-                    console.log('✅ Firestore و Security Rules درست تنظیم شده‌اند');
-                    useFirebase = true;
-                } catch (error) {
-                    if (error.code === 'permission-denied') {
-                        console.warn('⚠️ Firestore فعال است اما Security Rules نیاز به تنظیم دارد');
-                        showSecurityRulesWarning();
-                        useFirebase = false;
-                        // اما ادامه می‌دهیم تا کاربر را بررسی کنیم
-                    } else {
-                        throw error;
-                    }
-                }
-                
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 
-                if (!userDoc.exists || !userDoc.data().approved) {
-                    // کاربر تایید نشده - خروج و نمایش صفحه ورود
+                if (!userDoc.exists) {
+                    console.warn('⚠️ کاربر در Firestore یافت نشد');
                     await auth.signOut();
                     currentUser = null;
                     userRole = null;
-                    updateUIForAuth();
                     updatePageVisibility();
                     return;
                 }
                 
+                const userData = userDoc.data();
+                
+                if (!userData.approved) {
+                    console.warn('⚠️ کاربر تایید نشده است');
+                    await auth.signOut();
+                    currentUser = null;
+                    userRole = null;
+                    updatePageVisibility();
+                    showPendingApprovalMessage();
+                    return;
+                }
+                
                 // کاربر تایید شده است
-                currentUser = user;
-                await loadUserRole(user.uid);
+                currentUser = {
+                    id: user.uid,
+                    email: user.email,
+                    name: userData.name
+                };
+                userRole = userData.role;
+                
+                console.log('✅ کاربر لاگین شده:', currentUser.email);
                 updateUIForAuth();
                 updatePageVisibility();
                 if (allTransactions.length === 0) {
                     loadTransactions();
                 }
             } catch (error) {
-                console.error('خطا در بررسی وضعیت کاربر:', error);
-                // در صورت خطا، خروج و نمایش صفحه ورود
+                console.error('❌ خطا در بررسی وضعیت کاربر:', error);
                 if (auth.currentUser) {
                     await auth.signOut();
                 }
                 currentUser = null;
                 userRole = null;
-                updateUIForAuth();
                 updatePageVisibility();
             }
         } else {
+            // کاربر لاگین نیست
             currentUser = null;
             userRole = null;
-            updateUIForAuth();
             updatePageVisibility();
         }
     });
@@ -1556,7 +1519,7 @@ function updatePageVisibility() {
     const mainHeader = document.getElementById('mainHeader');
     const mainContent = document.getElementById('mainContent');
     
-    // بررسی وضعیت فعلی کاربر (localStorage)
+    // بررسی وضعیت فعلی کاربر (Firebase)
     const isLoggedIn = currentUser !== null;
     
     if (isLoggedIn) {
@@ -1601,7 +1564,22 @@ function hideAuthModal() {
 }
 
 // تغییر Tab در Modal ورود
-// تابع switchAuthTab حذف شد - دیگر ثبت‌نام از طریق سایت انجام نمی‌شود
+function switchAuthTab(tabName) {
+    // حذف active از همه tabs و forms
+    document.querySelectorAll('.auth-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.auth-form').forEach(form => {
+        form.classList.remove('active');
+    });
+    
+    // اضافه کردن active به tab و form انتخاب شده
+    const selectedTab = document.querySelector(`.auth-tab[data-tab="${tabName}"]`);
+    const selectedForm = document.getElementById(`${tabName}Form`);
+    
+    if (selectedTab) selectedTab.classList.add('active');
+    if (selectedForm) selectedForm.classList.add('active');
+}
 
 // Toggle password visibility
 function togglePassword(inputId) {
@@ -1634,7 +1612,24 @@ function setupAuthListeners() {
         });
     }
     
-    // Register form حذف شد - ثبت‌نام فقط از طریق Firebase Console انجام می‌شود
+    // Register form
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const role = document.getElementById('registerRole').value;
+            
+            if (!name || !email || !password || !role) {
+                showMessage('لطفاً تمام فیلدها را پر کنید', 'error');
+                return;
+            }
+            
+            await handleRegister(name, email, password, role);
+        });
+    }
     
     // Logout button
     const logoutBtn = document.getElementById('logoutBtn');
@@ -1643,44 +1638,67 @@ function setupAuthListeners() {
     }
 }
 
-// ورود (localStorage)
+// ورود (Firebase)
 async function handleLogin(email, password) {
+    if (!auth) {
+        showMessage('Firebase فعال نیست', 'error');
+        return;
+    }
+    
     try {
-        const users = getLocalUsers();
-        const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        console.log('🔵 در حال ورود کاربر...');
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        console.log('✅ ورود موفقیت‌آمیز:', userCredential.user.uid);
         
-        if (!user) {
-            showMessage('کاربری با این ایمیل یافت نشد', 'error');
+        // بررسی اینکه کاربر تایید شده است یا نه
+        const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
+        
+        if (!userDoc.exists) {
+            console.warn('⚠️ کاربر در Firestore یافت نشد');
+            await auth.signOut();
+            showMessage('کاربری با این ایمیل یافت نشد. لطفاً ابتدا ثبت‌نام کنید.', 'error');
             return;
         }
         
-        if (user.password !== password) {
-            showMessage('رمز عبور اشتباه است', 'error');
+        const userData = userDoc.data();
+        
+        if (!userData.approved) {
+            console.warn('⚠️ کاربر تایید نشده است');
+            await auth.signOut();
+            showMessage('حساب کاربری شما هنوز تایید نشده است. لطفاً منتظر تایید مدیر بمانید.', 'error');
+            showPendingApprovalMessage();
             return;
         }
         
         // لاگین موفق
         currentUser = {
-            id: user.id,
-            email: user.email,
-            name: user.name
+            id: userCredential.user.uid,
+            email: userCredential.user.email,
+            name: userData.name
         };
-        userRole = user.role;
+        userRole = userData.role;
         
-        // ذخیره session
-        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
-            userId: user.id,
-            loginTime: new Date().toISOString()
-        }));
-        
+        console.log('✅ کاربر لاگین شد:', currentUser);
         showMessage('✅ ورود موفقیت‌آمیز بود', 'success');
         updateUIForAuth();
         updatePageVisibility();
         switchPage('transactions');
         loadTransactions();
     } catch (error) {
-        console.error('خطا در ورود:', error);
-        showMessage('خطا در ورود. لطفاً دوباره تلاش کنید.', 'error');
+        console.error('❌ خطا در ورود:', error);
+        let errorMessage = 'خطا در ورود. لطفاً دوباره تلاش کنید.';
+        
+        if (error.code === 'auth/user-not-found') {
+            errorMessage = 'کاربری با این ایمیل یافت نشد';
+        } else if (error.code === 'auth/wrong-password') {
+            errorMessage = 'رمز عبور اشتباه است';
+        } else if (error.code === 'auth/invalid-email') {
+            errorMessage = 'ایمیل نامعتبر است';
+        } else if (error.code === 'auth/network-request-failed') {
+            errorMessage = 'خطا در اتصال به اینترنت. لطفاً دوباره تلاش کنید.';
+        }
+        
+        showMessage(errorMessage, 'error');
     }
 }
 
