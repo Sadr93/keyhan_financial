@@ -348,27 +348,11 @@ function setupNavigation() {
             btn.classList.add('active');
             
             if (filter === 'custom') {
-                const customDateRange = document.getElementById('customDateRange');
-                customDateRange.style.display = 'flex';
-                
-                // اطمینان از اینکه تاریخ‌نگارها آماده هستند
-                initializeReportDatePickers();
-
-                // باز کردن خودکار دیتاپیکر شروع
-                setTimeout(() => {
-                    const startDateInput = document.getElementById('startDate');
-                    if (startDateInput) {
-                        $(startDateInput).focus();
-                        if ($(startDateInput).data('persianDatepicker')) {
-                            $(startDateInput).persianDatepicker('show');
-                        }
-                    }
-                }, 100);
+                openDateRangeModal();
             } else {
                 document.getElementById('customDateRange').style.display = 'none';
+                loadReports(filter);
             }
-            
-            loadReports(filter);
         });
     });
 }
@@ -1403,6 +1387,303 @@ function initializeReportDatePickers() {
             calendarType: 'persian'
         });
     }
+}
+
+// ==================== Date Range Modal Functions ====================
+
+let selectedStartDate = null;
+let selectedEndDate = null;
+let startCalendarDate = null;
+let endCalendarDate = null;
+
+// باز کردن modal انتخاب بازه تاریخ
+function openDateRangeModal() {
+    const modal = document.getElementById('dateRangeModal');
+    if (!modal) return;
+    
+    modal.style.display = 'flex';
+    
+    // مقداردهی اولیه
+    const today = new persianDate();
+    startCalendarDate = new persianDate(today);
+    endCalendarDate = new persianDate(today);
+    endCalendarDate.add('month', 1);
+    
+    selectedStartDate = null;
+    selectedEndDate = null;
+    
+    // پاک کردن فیلدها
+    document.getElementById('modalStartDate').value = '';
+    document.getElementById('modalEndDate').value = '';
+    document.getElementById('clearEndDate').style.display = 'none';
+    document.getElementById('dateRangeSummary').textContent = '';
+    
+    // ایجاد تقویم‌ها
+    renderCalendars();
+    
+    // تنظیم event listeners
+    setupDateRangeModalEvents();
+}
+
+// بستن modal
+function closeDateRangeModal() {
+    const modal = document.getElementById('dateRangeModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// تنظیم event listeners برای modal
+function setupDateRangeModalEvents() {
+    // بستن modal
+    const closeBtn = document.getElementById('closeDateRangeModal');
+    const cancelBtn = document.getElementById('cancelDateRangeBtn');
+    const modal = document.getElementById('dateRangeModal');
+    
+    if (closeBtn) {
+        closeBtn.onclick = closeDateRangeModal;
+    }
+    if (cancelBtn) {
+        cancelBtn.onclick = closeDateRangeModal;
+    }
+    if (modal) {
+        modal.onclick = (e) => {
+            if (e.target === modal) closeDateRangeModal();
+        };
+    }
+    
+    // دکمه برو به امروز
+    const goToTodayBtn = document.getElementById('goToTodayBtn');
+    if (goToTodayBtn) {
+        goToTodayBtn.onclick = () => {
+            const today = new persianDate();
+            startCalendarDate = new persianDate(today);
+            endCalendarDate = new persianDate(today);
+            endCalendarDate.add('month', 1);
+            renderCalendars();
+        };
+    }
+    
+    // ناوبری ماه‌ها
+    const prevMonthStart = document.getElementById('prevMonthStart');
+    const nextMonthEnd = document.getElementById('nextMonthEnd');
+    
+    if (prevMonthStart) {
+        prevMonthStart.onclick = () => {
+            startCalendarDate.subtract('month', 1);
+            renderCalendars();
+        };
+    }
+    
+    if (nextMonthEnd) {
+        nextMonthEnd.onclick = () => {
+            endCalendarDate.add('month', 1);
+            renderCalendars();
+        };
+    }
+    
+    // پاک کردن تاریخ پایان
+    const clearEndDate = document.getElementById('clearEndDate');
+    if (clearEndDate) {
+        clearEndDate.onclick = () => {
+            selectedEndDate = null;
+            document.getElementById('modalEndDate').value = '';
+            clearEndDate.style.display = 'none';
+            updateDateRangeSummary();
+            renderCalendars();
+        };
+    }
+    
+    // تایید بازه تاریخ
+    const confirmBtn = document.getElementById('confirmDateRangeBtn');
+    if (confirmBtn) {
+        confirmBtn.onclick = confirmDateRange;
+    }
+    
+    // استفاده از persianDatepicker برای فیلدهای ورودی
+    const modalStartDate = document.getElementById('modalStartDate');
+    const modalEndDate = document.getElementById('modalEndDate');
+    
+    if (modalStartDate && !$(modalStartDate).data('persianDatepicker')) {
+        $(modalStartDate).persianDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD',
+            initialValue: false,
+            calendarType: 'persian',
+            onSelect: (unix) => {
+                selectedStartDate = new persianDate(unix);
+                document.getElementById('modalStartDate').value = selectedStartDate.format('YYYY/MM/DD');
+                startCalendarDate = new persianDate(selectedStartDate);
+                renderCalendars();
+                updateDateRangeSummary();
+            }
+        });
+    }
+    
+    if (modalEndDate && !$(modalEndDate).data('persianDatepicker')) {
+        $(modalEndDate).persianDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD',
+            initialValue: false,
+            calendarType: 'persian',
+            onSelect: (unix) => {
+                selectedEndDate = new persianDate(unix);
+                document.getElementById('modalEndDate').value = selectedEndDate.format('YYYY/MM/DD');
+                document.getElementById('clearEndDate').style.display = 'block';
+                endCalendarDate = new persianDate(selectedEndDate);
+                renderCalendars();
+                updateDateRangeSummary();
+            }
+        });
+    }
+}
+
+// رندر کردن تقویم‌ها
+function renderCalendars() {
+    if (!startCalendarDate || !endCalendarDate) return;
+    
+    renderCalendar('startCalendar', startCalendarDate, selectedStartDate, selectedEndDate, true);
+    renderCalendar('endCalendar', endCalendarDate, selectedStartDate, selectedEndDate, false);
+    
+    // به‌روزرسانی نام ماه‌ها
+    const monthNames = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+    document.getElementById('startMonthName').textContent = monthNames[startCalendarDate.month()] + ' ' + startCalendarDate.year();
+    document.getElementById('endMonthName').textContent = monthNames[endCalendarDate.month()] + ' ' + endCalendarDate.year();
+}
+
+// رندر یک تقویم
+function renderCalendar(containerId, currentDate, startDate, endDate, isStartCalendar) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // هدر روزهای هفته
+    const weekDays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+    weekDays.forEach(day => {
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'calendar-day-header';
+        dayHeader.textContent = day;
+        container.appendChild(dayHeader);
+    });
+    
+    // اولین روز ماه
+    const firstDay = new persianDate(currentDate.year(), currentDate.month() + 1, 1);
+    const firstDayOfWeek = firstDay.day();
+    
+    // تعداد روزهای ماه
+    const daysInMonth = currentDate.daysInMonth();
+    
+    // روزهای خالی قبل از اولین روز
+    for (let i = 0; i < firstDayOfWeek; i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day';
+        container.appendChild(emptyDay);
+    }
+    
+    // روزهای ماه
+    const today = new persianDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayElement = document.createElement('div');
+        dayElement.className = 'calendar-day';
+        dayElement.textContent = day;
+        
+        const currentDayDate = new persianDate(currentDate.year(), currentDate.month() + 1, day);
+        
+        // بررسی اینکه آیا در بازه انتخاب شده است
+        if (startDate && endDate) {
+            if (currentDayDate.valueOf() >= startDate.valueOf() && currentDayDate.valueOf() <= endDate.valueOf()) {
+                dayElement.classList.add('in-range');
+            }
+            if (currentDayDate.format('YYYY/MM/DD') === startDate.format('YYYY/MM/DD')) {
+                dayElement.classList.add('selected');
+            }
+            if (currentDayDate.format('YYYY/MM/DD') === endDate.format('YYYY/MM/DD')) {
+                dayElement.classList.add('selected');
+            }
+        } else if (startDate && currentDayDate.format('YYYY/MM/DD') === startDate.format('YYYY/MM/DD')) {
+            dayElement.classList.add('selected');
+        } else if (endDate && currentDayDate.format('YYYY/MM/DD') === endDate.format('YYYY/MM/DD')) {
+            dayElement.classList.add('selected');
+        }
+        
+        // غیرفعال کردن روزهای گذشته (فقط برای تقویم شروع)
+        if (isStartCalendar && currentDayDate.valueOf() < today.startOf('day').valueOf()) {
+            dayElement.classList.add('disabled');
+        } else {
+            dayElement.onclick = () => selectDate(currentDayDate, isStartCalendar);
+        }
+        
+        container.appendChild(dayElement);
+    }
+}
+
+// انتخاب تاریخ
+function selectDate(date, isStart) {
+    if (isStart) {
+        selectedStartDate = new persianDate(date);
+        document.getElementById('modalStartDate').value = selectedStartDate.format('YYYY/MM/DD');
+        
+        // اگر تاریخ پایان قبل از تاریخ شروع باشد، پاک کن
+        if (selectedEndDate && selectedEndDate.valueOf() < selectedStartDate.valueOf()) {
+            selectedEndDate = null;
+            document.getElementById('modalEndDate').value = '';
+            document.getElementById('clearEndDate').style.display = 'none';
+        }
+    } else {
+        // اگر تاریخ شروع انتخاب نشده یا تاریخ انتخاب شده قبل از تاریخ شروع باشد
+        if (!selectedStartDate || date.valueOf() < selectedStartDate.valueOf()) {
+            selectedStartDate = new persianDate(date);
+            document.getElementById('modalStartDate').value = selectedStartDate.format('YYYY/MM/DD');
+            selectedEndDate = null;
+            document.getElementById('modalEndDate').value = '';
+            document.getElementById('clearEndDate').style.display = 'none';
+        } else {
+            selectedEndDate = new persianDate(date);
+            document.getElementById('modalEndDate').value = selectedEndDate.format('YYYY/MM/DD');
+            document.getElementById('clearEndDate').style.display = 'block';
+        }
+    }
+    
+    renderCalendars();
+    updateDateRangeSummary();
+}
+
+// به‌روزرسانی خلاصه بازه تاریخ
+function updateDateRangeSummary() {
+    const summary = document.getElementById('dateRangeSummary');
+    if (!summary) return;
+    
+    if (selectedStartDate && selectedEndDate) {
+        const monthNames = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+        const startMonth = monthNames[selectedStartDate.month()];
+        const endMonth = monthNames[selectedEndDate.month()];
+        summary.textContent = `از ${selectedStartDate.date()} ${startMonth} تا ${selectedEndDate.date()} ${endMonth}`;
+    } else if (selectedStartDate) {
+        const monthNames = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+        const startMonth = monthNames[selectedStartDate.month()];
+        summary.textContent = `از ${selectedStartDate.date()} ${startMonth}`;
+    } else {
+        summary.textContent = '';
+    }
+}
+
+// تایید بازه تاریخ و اعمال فیلتر
+function confirmDateRange() {
+    if (!selectedStartDate || !selectedEndDate) {
+        showMessage('لطفاً هر دو تاریخ را انتخاب کنید', 'error');
+        return;
+    }
+    
+    // ذخیره تاریخ‌ها در فیلدهای اصلی
+    document.getElementById('startDate').value = selectedStartDate.format('YYYY/MM/DD');
+    document.getElementById('endDate').value = selectedEndDate.format('YYYY/MM/DD');
+    
+    // بستن modal
+    closeDateRangeModal();
+    
+    // اعمال فیلتر
+    applyCustomDateRange();
 }
 
 // تنظیم amount input بعد از لود شدن
