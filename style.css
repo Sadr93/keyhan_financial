@@ -896,7 +896,7 @@ textarea::placeholder {
 
 .summary-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: none;
 }
 
 .summary-card:hover::before {
@@ -987,7 +987,7 @@ textarea::placeholder {
 
 .chart-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: none;
 }
 
 .chart-card h3 {
@@ -1029,7 +1029,7 @@ textarea::placeholder {
 }
 
 .reports-table-container:hover {
-    box-shadow: var(--shadow-lg);
+    box-shadow: none;
 }
 
 .reports-table-container.income-table {
