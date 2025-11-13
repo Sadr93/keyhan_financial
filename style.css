@@ -653,7 +653,6 @@ textarea::placeholder {
     border: none;
     animation: slideDown 0.3s;
     font-family: 'Vazirmatn', sans-serif;
-    box-shadow: var(--shadow-lg);
 }
 
 .message.success {
