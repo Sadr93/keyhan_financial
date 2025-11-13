@@ -1940,7 +1940,6 @@ async function handleLogout() {
 function updateUIForAuth() {
     const userInfo = document.getElementById('userInfo');
     const userName = document.getElementById('userName');
-    const userRoleSpan = document.getElementById('userRole');
     const addTransactionBtn = document.getElementById('addTransactionBtn');
     
     if (currentUser) {
@@ -1948,16 +1947,6 @@ function updateUIForAuth() {
         if (userInfo) userInfo.style.display = 'flex';
         if (userName) {
             userName.textContent = currentUser.name || currentUser.email;
-        }
-        
-        // نمایش نقش
-        if (userRoleSpan) {
-            const roleNames = {
-                'admin': 'مدیر',
-                'editor': 'ویرایش‌گر',
-                'viewer': 'مشاهده‌گر'
-            };
-            userRoleSpan.textContent = roleNames[userRole] || 'کاربر';
         }
         
         // محدود کردن دسترسی بر اساس نقش
