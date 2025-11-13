@@ -1218,7 +1218,7 @@ textarea::placeholder {
 
 .subcategory-row:hover .subcategory-dot {
     transform: scale(1.4);
-    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.3);
+    box-shadow: none;
 }
 
 .subcategory-count,
@@ -1252,7 +1252,7 @@ textarea::placeholder {
 }
 
 .income-table .subcategory-row:hover .subcategory-dot {
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+    box-shadow: none;
 }
 
 .income-table .subcategory-row:hover {
@@ -1281,7 +1281,7 @@ textarea::placeholder {
 }
 
 .expense-table .subcategory-row:hover .subcategory-dot {
-    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+    box-shadow: none;
 }
 
 .expense-table .subcategory-row:hover {
@@ -1462,7 +1462,7 @@ textarea::placeholder {
 .auth-tab.active {
     color: var(--text-dark);
     background: var(--white);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
 }
 
 .tab-icon {
