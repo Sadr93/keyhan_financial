@@ -348,7 +348,22 @@ function setupNavigation() {
             btn.classList.add('active');
             
             if (filter === 'custom') {
-                document.getElementById('customDateRange').style.display = 'flex';
+                const customDateRange = document.getElementById('customDateRange');
+                customDateRange.style.display = 'flex';
+                
+                // اطمینان از اینکه تاریخ‌نگارها آماده هستند
+                initializeReportDatePickers();
+
+                // باز کردن خودکار دیتاپیکر شروع
+                setTimeout(() => {
+                    const startDateInput = document.getElementById('startDate');
+                    if (startDateInput) {
+                        $(startDateInput).focus();
+                        if ($(startDateInput).data('persianDatepicker')) {
+                            $(startDateInput).persianDatepicker('show');
+                        }
+                    }
+                }, 100);
             } else {
                 document.getElementById('customDateRange').style.display = 'none';
             }
