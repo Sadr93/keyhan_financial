@@ -142,10 +142,12 @@
             <!-- صفحه گزارشات -->
             <main class="main-content" id="reportsPage" style="display: none;">
                 <div class="reports-header">
-                    <h2>گزارشات مالی</h2>
-                    <div class="report-filters">
-                        <button class="filter-btn active" data-filter="all">گزارش کلی</button>
-                        <button class="filter-btn" data-filter="custom">بازه انتخابی</button>
+                    <div class="reports-header-top">
+                        <h2>گزارشات مالی</h2>
+                        <div class="report-filters">
+                            <button class="filter-btn active" data-filter="all">گزارش کلی</button>
+                            <button class="filter-btn" data-filter="custom">بازه انتخابی</button>
+                        </div>
                     </div>
                     <div class="custom-date-range" id="customDateRange" style="display: none;">
                         <input type="text" id="startDate" class="date-input" placeholder="از تاریخ">
@@ -153,36 +155,31 @@
                         <input type="text" id="endDate" class="date-input" placeholder="تا تاریخ">
                         <button class="btn-apply-filter" onclick="applyCustomDateRange()">اعمال</button>
                     </div>
-                </div>
-
-                <!-- خلاصه گزارشات -->
-                <div class="summary-cards">
-                    <div class="summary-card income-card">
-                        <div class="card-icon">💰</div>
-                        <div class="card-content">
-                            <h3>کل درآمد</h3>
-                            <p class="card-amount" id="totalIncome">۰</p>
+                    <!-- خلاصه گزارشات -->
+                    <div class="summary-cards">
+                        <div class="summary-card count-card">
+                            <div class="card-content">
+                                <h3>تعداد تراکنش</h3>
+                                <p class="card-amount" id="totalCount">۰</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="summary-card expense-card">
-                        <div class="card-icon">💸</div>
-                        <div class="card-content">
-                            <h3>کل هزینه</h3>
-                            <p class="card-amount" id="totalExpense">۰</p>
+                        <div class="summary-card balance-card">
+                            <div class="card-content">
+                                <h3>طراز مالی</h3>
+                                <p class="card-amount" id="totalBalance">۰</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="summary-card balance-card">
-                        <div class="card-icon">📊</div>
-                        <div class="card-content">
-                            <h3>طراز مالی</h3>
-                            <p class="card-amount" id="totalBalance">۰</p>
+                        <div class="summary-card expense-card">
+                            <div class="card-content">
+                                <h3>کل هزینه</h3>
+                                <p class="card-amount" id="totalExpense">۰</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="summary-card count-card">
-                        <div class="card-icon">📝</div>
-                        <div class="card-content">
-                            <h3>تعداد تراکنش</h3>
-                            <p class="card-amount" id="totalCount">۰</p>
+                        <div class="summary-card income-card">
+                            <div class="card-content">
+                                <h3>کل درآمد</h3>
+                                <p class="card-amount" id="totalIncome">۰</p>
+                            </div>
                         </div>
                     </div>
                 </div>
