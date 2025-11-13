@@ -230,15 +230,13 @@
                     <div class="reports-header-top">
                         <h2>گزارشات مالی</h2>
                         <div class="report-filters">
-                            <button class="filter-btn active" data-filter="all">گزارش کلی</button>
-                            <button class="filter-btn" data-filter="custom">بازه انتخابی</button>
+                            <button class="filter-btn active" data-filter="all" id="allReportBtn">گزارش کلی</button>
+                            <div class="date-range-inputs" id="dateRangeInputs" style="display: none;">
+                                <input type="text" id="startDate" class="date-range-input" placeholder="از تاریخ">
+                                <input type="text" id="endDate" class="date-range-input" placeholder="تا تاریخ">
+                            </div>
+                            <button class="filter-btn" data-filter="custom" id="customReportBtn">بازه انتخابی</button>
                         </div>
-                    </div>
-                    <div class="custom-date-range" id="customDateRange" style="display: none;">
-                        <input type="text" id="startDate" class="date-input" placeholder="از تاریخ">
-                        <span>تا</span>
-                        <input type="text" id="endDate" class="date-input" placeholder="تا تاریخ">
-                        <button class="btn-apply-filter" onclick="applyCustomDateRange()">اعمال</button>
                     </div>
                     <!-- خلاصه گزارشات -->
                     <div class="summary-cards">
@@ -396,53 +394,6 @@
                         <button type="submit" class="btn-submit">ثبت تراکنش</button>
                     </div>
                 </form>
-            </div>
-        </div>
-
-        <!-- Modal انتخاب بازه تاریخ -->
-        <div id="dateRangeModal" class="modal">
-            <div class="modal-content date-range-modal-content">
-                <div class="modal-header">
-                    <h2>انتخاب بازه تاریخ</h2>
-                    <button class="modal-close" id="closeDateRangeModal">&times;</button>
-                </div>
-                <div class="date-range-picker">
-                    <div class="date-range-inputs">
-                        <div class="date-input-wrapper">
-                            <label for="modalStartDate">از تاریخ</label>
-                            <input type="text" id="modalStartDate" class="date-range-input" placeholder="از تاریخ">
-                        </div>
-                        <div class="date-input-wrapper">
-                            <label for="modalEndDate">تا تاریخ</label>
-                            <input type="text" id="modalEndDate" class="date-range-input" placeholder="تا تاریخ">
-                            <button type="button" class="clear-date-btn" id="clearEndDate" style="display: none;">&times;</button>
-                        </div>
-                    </div>
-                    <div class="date-range-actions">
-                        <button type="button" class="btn-go-today" id="goToTodayBtn">برو به امروز</button>
-                    </div>
-                    <div class="date-range-calendars">
-                        <div class="calendar-wrapper">
-                            <div class="calendar-header">
-                                <button type="button" class="calendar-nav-btn prev-month" id="prevMonthStart">&larr;</button>
-                                <span class="calendar-month" id="startMonthName"></span>
-                            </div>
-                            <div id="startCalendar" class="calendar"></div>
-                        </div>
-                        <div class="calendar-wrapper">
-                            <div class="calendar-header">
-                                <span class="calendar-month" id="endMonthName"></span>
-                                <button type="button" class="calendar-nav-btn next-month" id="nextMonthEnd">&rarr;</button>
-                            </div>
-                            <div id="endCalendar" class="calendar"></div>
-                        </div>
-                    </div>
-                    <div class="date-range-summary" id="dateRangeSummary"></div>
-                    <div class="date-range-modal-actions">
-                        <button type="button" class="btn-cancel" id="cancelDateRangeBtn">انصراف</button>
-                        <button type="button" class="btn-confirm" id="confirmDateRangeBtn">تایید</button>
-                    </div>
-                </div>
             </div>
         </div>
 
