@@ -587,23 +587,18 @@ async function saveTransaction(transaction) {
         transaction.createdByName = currentUser.name || currentUser.email;
     }
     
-    if (useFirebase && db) {
-        try {
-            if (transaction.createdAt === undefined) {
-                transaction.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            }
-            await db.collection(COLLECTION_NAME).add(transaction);
-            return;
-        } catch (error) {
-            console.error('خطا در ذخیره Firebase:', error);
-            throw error;
+    if (!db) {
+        throw new Error('Firebase Firestore تنظیم نشده است. لطفاً Firebase را تنظیم کنید.');
+    }
+    
+    try {
+        if (transaction.createdAt === undefined) {
+            transaction.createdAt = firebase.firestore.FieldValue.serverTimestamp();
         }
-    } else {
-        const transactions = getLocalStorageTransactions();
-        transaction.id = Date.now();
-        transaction.createdAt = new Date();
-        transactions.push(transaction);
-        localStorage.setItem('keyhan_financial_transactions', JSON.stringify(transactions));
+        await db.collection(COLLECTION_NAME).add(transaction);
+    } catch (error) {
+        console.error('خطا در ذخیره Firebase:', error);
+        throw error;
     }
 }
 
@@ -616,21 +611,15 @@ async function updateTransaction(id, transaction) {
         transaction.updatedAt = new Date().toISOString();
     }
     
-    if (useFirebase && db) {
-        try {
-            await db.collection(COLLECTION_NAME).doc(id).update(transaction);
-            return;
-        } catch (error) {
-            console.error('خطا در بروزرسانی Firebase:', error);
-            throw error;
-        }
-    } else {
-        const transactions = getLocalStorageTransactions();
-        const index = transactions.findIndex(t => t.id == id);
-        if (index !== -1) {
-            transactions[index] = { ...transactions[index], ...transaction };
-            localStorage.setItem('keyhan_financial_transactions', JSON.stringify(transactions));
-        }
+    if (!db) {
+        throw new Error('Firebase Firestore تنظیم نشده است. لطفاً Firebase را تنظیم کنید.');
+    }
+    
+    try {
+        await db.collection(COLLECTION_NAME).doc(id).update(transaction);
+    } catch (error) {
+        console.error('خطا در بروزرسانی Firebase:', error);
+        throw error;
     }
 }
 
@@ -645,26 +634,25 @@ async function deleteTransaction(id) {
         return;
     }
     
+    if (!db) {
+        showMessage('Firebase Firestore تنظیم نشده است. لطفاً Firebase را تنظیم کنید.', 'error');
+        return;
+    }
+    
     try {
-        if (useFirebase && db) {
-            // اضافه کردن Audit Log قبل از حذف
-            if (currentUser) {
-                const deletedBy = currentUser.id;
-                const deletedByName = currentUser.name || currentUser.email;
-                // ذخیره اطلاعات حذف در document (soft delete)
-                await db.collection(COLLECTION_NAME).doc(id).update({
-                    deletedBy: deletedBy,
-                    deletedByName: deletedByName,
-                    deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    isDeleted: true
-                });
-            } else {
-                await db.collection(COLLECTION_NAME).doc(id).delete();
-            }
+        // اضافه کردن Audit Log قبل از حذف
+        if (currentUser) {
+            const deletedBy = currentUser.id;
+            const deletedByName = currentUser.name || currentUser.email;
+            // ذخیره اطلاعات حذف در document (soft delete)
+            await db.collection(COLLECTION_NAME).doc(id).update({
+                deletedBy: deletedBy,
+                deletedByName: deletedByName,
+                deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                isDeleted: true
+            });
         } else {
-            const transactions = getLocalStorageTransactions();
-            const filtered = transactions.filter(t => t.id != id);
-            localStorage.setItem('keyhan_financial_transactions', JSON.stringify(filtered));
+            await db.collection(COLLECTION_NAME).doc(id).delete();
         }
         
         showMessage('تراکنش با موفقیت حذف شد!', 'success');
@@ -677,40 +665,34 @@ async function deleteTransaction(id) {
 
 // دریافت تمام تراکنش‌ها
 async function getTransactions() {
-    if (useFirebase && db) {
-        try {
-            const snapshot = await db.collection(COLLECTION_NAME)
-                .orderBy('createdAt', 'desc')
-                .get();
-            
-            const transactions = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                // فیلتر کردن تراکنش‌های حذف شده (soft delete)
-                if (!data.isDeleted) {
-                    transactions.push({
-                        id: doc.id,
-                        ...data,
-                        createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
-                        updatedAt: data.updatedAt ? data.updatedAt.toDate() : null
-                    });
-                }
-            });
-            
-            return transactions;
-        } catch (error) {
-            console.error('خطا در خواندن Firebase:', error);
-            return getLocalStorageTransactions();
-        }
-    } else {
-        return getLocalStorageTransactions();
+    if (!db) {
+        throw new Error('Firebase Firestore تنظیم نشده است. لطفاً Firebase را تنظیم کنید.');
     }
-}
-
-// دریافت از localStorage
-function getLocalStorageTransactions() {
-    const data = localStorage.getItem('keyhan_financial_transactions');
-    return data ? JSON.parse(data) : [];
+    
+    try {
+        const snapshot = await db.collection(COLLECTION_NAME)
+            .orderBy('createdAt', 'desc')
+            .get();
+        
+        const transactions = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            // فیلتر کردن تراکنش‌های حذف شده (soft delete)
+            if (!data.isDeleted) {
+                transactions.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
+                    updatedAt: data.updatedAt ? data.updatedAt.toDate() : null
+                });
+            }
+        });
+        
+        return transactions;
+    } catch (error) {
+        console.error('خطا در خواندن Firebase:', error);
+        throw error;
+    }
 }
 
 // بارگذاری تراکنش‌ها
@@ -765,24 +747,20 @@ function renderTable() {
 
 // تغییر وضعیت ثبت حسابداری
 async function toggleAccountingRegistered(transactionId, checked) {
+    if (!db) {
+        showMessage('Firebase Firestore تنظیم نشده است. لطفاً Firebase را تنظیم کنید.', 'error');
+        return;
+    }
+    
     try {
         const transaction = allTransactions.find(t => t.id === transactionId);
         if (!transaction) return;
         
         transaction.accountingRegistered = checked;
         
-        if (useFirebase && db) {
-            await db.collection(COLLECTION_NAME).doc(transactionId).update({
-                accountingRegistered: checked
-            });
-        } else {
-            const transactions = getLocalStorageTransactions();
-            const index = transactions.findIndex(t => t.id === transactionId);
-            if (index !== -1) {
-                transactions[index].accountingRegistered = checked;
-                localStorage.setItem('keyhan_financial_transactions', JSON.stringify(transactions));
-            }
-        }
+        await db.collection(COLLECTION_NAME).doc(transactionId).update({
+            accountingRegistered: checked
+        });
         
         showMessage(checked ? 'ثبت حسابداری فعال شد' : 'ثبت حسابداری غیرفعال شد', 'success');
     } catch (error) {
