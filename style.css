@@ -1397,8 +1397,8 @@ textarea::placeholder {
 }
 
 .auth-logo {
-    width: 100px;
-    height: 100px;
+    width: 180px;
+    height: 180px;
     object-fit: contain;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
 }
@@ -1411,10 +1411,10 @@ textarea::placeholder {
 }
 
 .auth-subtitle {
-    margin: 8px 0 0 0;
-    font-size: 0.95em;
-    color: rgba(255, 255, 255, 0.9);
-    font-weight: 400;
+    margin: 20px 0 0 0;
+    font-size: 1.2em;
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
 }
 
 .auth-logo-section {
@@ -1425,8 +1425,8 @@ textarea::placeholder {
 }
 
 .auth-logo {
-    width: 80px;
-    height: 80px;
+    width: 150px;
+    height: 150px;
     object-fit: contain;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
@@ -1733,8 +1733,8 @@ textarea::placeholder {
     }
     
     .auth-logo {
-        width: 80px;
-        height: 80px;
+        width: 120px;
+        height: 120px;
     }
     
     .auth-form-content {
