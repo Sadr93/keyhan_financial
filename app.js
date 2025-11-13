@@ -56,11 +56,9 @@ let useFirebase = false;
 let allTransactions = [];
 let filteredTransactions = [];
 
-// Authentication state - استفاده از localStorage به جای Firebase
+// Authentication state - استفاده از Firebase
 let currentUser = null;
 let userRole = null;
-const USERS_STORAGE_KEY = 'keyhan_financial_users';
-const SESSION_STORAGE_KEY = 'keyhan_financial_session';
 
 // مقداردهی اولیه
 document.addEventListener('DOMContentLoaded', async function() {
@@ -1400,49 +1398,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// ==================== Authentication Functions (localStorage) ====================
-
-// دریافت لیست کاربران از localStorage
-function getLocalUsers() {
-    try {
-        const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-        return usersJson ? JSON.parse(usersJson) : [];
-    } catch (error) {
-        console.error('خطا در خواندن کاربران:', error);
-        return [];
-    }
-}
-
-// ذخیره لیست کاربران در localStorage
-function saveLocalUsers(users) {
-    try {
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-    } catch (error) {
-        console.error('خطا در ذخیره کاربران:', error);
-    }
-}
-
-// ایجاد کاربر پیش‌فرض admin
-function initializeDefaultUsers() {
-    const users = getLocalUsers();
-    if (users.length === 0) {
-        // ایجاد کاربر پیش‌فرض admin
-        const defaultUser = {
-            id: 'admin-001',
-            email: 'admin@keyhan.com',
-            password: 'admin123', // کاربر باید این را تغییر دهد
-            name: 'مدیر سیستم',
-            role: 'admin',
-            createdAt: new Date().toISOString()
-        };
-        users.push(defaultUser);
-        saveLocalUsers(users);
-        console.log('✅ کاربر پیش‌فرض admin ایجاد شد');
-        console.log('📧 ایمیل: admin@keyhan.com');
-        console.log('🔒 رمز عبور: admin123');
-        console.log('⚠️ لطفاً بعد از ورود، رمز عبور را تغییر دهید!');
-    }
-}
+// ==================== Authentication Functions (Firebase) ====================
 
 // بررسی وضعیت Authentication از Firebase
 function checkAuthState() {
