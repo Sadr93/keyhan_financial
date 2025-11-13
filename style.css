@@ -229,7 +229,7 @@ header h1 {
 
 /* Table */
 .table-container {
-    background: var(--white);
+    background: transparent;
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-color);
     overflow: hidden;
@@ -240,16 +240,17 @@ header h1 {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    background: var(--white);
+    background: transparent;
     font-size: 0.9em;
 }
 
 .transactions-table thead {
-    background: var(--sidebar-bg);
+    background: rgba(245, 245, 245, 0.7);
     border-bottom: 2px solid var(--border-color);
     position: sticky;
     top: 0;
     z-index: 10;
+    backdrop-filter: blur(5px);
 }
 
 .transactions-table th {
