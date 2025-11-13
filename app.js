@@ -378,13 +378,6 @@ function switchPage(page) {
         reportsPage.style.display = 'block';
         if (usersPage) usersPage.style.display = 'none';
         loadReports('all');
-    } else if (page === 'users') {
-        transactionsPage.style.display = 'none';
-        reportsPage.style.display = 'none';
-        if (usersPage) {
-            usersPage.style.display = 'block';
-            loadUsers();
-        }
     }
 }
 
