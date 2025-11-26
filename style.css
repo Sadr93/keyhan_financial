@@ -803,10 +803,6 @@ textarea::placeholder {
     position: relative;
 }
 
-.report-filters.custom-active {
-    gap: 16px;
-}
-
 .filter-btn {
     padding: 12px 28px;
     background: var(--white);
@@ -820,14 +816,6 @@ textarea::placeholder {
     font-family: 'Vazirmatn', sans-serif;
     box-shadow: none;
     white-space: nowrap;
-}
-
-#allReportBtn {
-    transition: margin 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-.report-filters.custom-active #allReportBtn {
-    margin-left: 20px;
 }
 
 .date-range-inputs {

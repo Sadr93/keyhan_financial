@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سیستم مالی کیهان</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="libs/jalalidatepicker.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
     <!-- فونت فارسی -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -232,8 +232,8 @@
                         <div class="report-filters">
                             <button class="filter-btn active" data-filter="all" id="allReportBtn">گزارش کلی</button>
                             <div class="date-range-inputs" id="dateRangeInputs" style="display: none;">
-                                <input type="text" id="startDate" class="date-range-input" placeholder="از تاریخ" data-jdp>
-                                <input type="text" id="endDate" class="date-range-input" placeholder="تا تاریخ" data-jdp>
+                                <input type="text" id="startDate" class="date-range-input" placeholder="از تاریخ">
+                                <input type="text" id="endDate" class="date-range-input" placeholder="تا تاریخ">
                             </div>
                             <button class="filter-btn" data-filter="custom" id="customReportBtn">بازه انتخابی</button>
                         </div>
@@ -344,10 +344,10 @@
                 </div>
                 <form id="transactionForm">
                     <input type="hidden" id="editTransactionId">
-                            <div class="form-group">
-                                <label for="date">تاریخ:</label>
-                                <input type="text" id="date" name="date" class="date-input" required readonly data-jdp>
-                            </div>
+                    <div class="form-group">
+                        <label for="date">تاریخ:</label>
+                        <input type="text" id="date" name="date" class="date-input" required readonly>
+                    </div>
 
                     <div class="form-group">
                         <label for="type">نوع:</label>
@@ -401,8 +401,8 @@
         <div id="message" class="message"></div>
     </div>
 
-    <script src="libs/persian-date.min.js"></script>
-    <script src="libs/jalalidatepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- Firebase SDK -->
