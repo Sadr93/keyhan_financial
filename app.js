@@ -59,6 +59,7 @@ let filteredTransactions = [];
 // Authentication state - استفاده از Firebase
 let currentUser = null;
 let userRole = null;
+let datepickerTooltipCleanupAttached = false;
 
 // مقداردهی اولیه
 document.addEventListener('DOMContentLoaded', async function() {
@@ -94,6 +95,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupEventListeners();
     setupNavigation();
     setupAuthListeners();
+    setupDatepickerTooltipCleanup();
     
     // نمایش صفحه مناسب بر اساس وضعیت لاگین
     updatePageVisibility();
@@ -267,6 +269,44 @@ service cloud.firestore {
     document.body.insertBefore(warning, document.body.firstChild);
 }
 
+function configureDatePickerInput(element, options = {}) {
+    if (!element || typeof $ === 'undefined') return;
+    const $element = $(element);
+    if ($element.data('persianDatepicker')) {
+        $element.persianDatepicker('destroy');
+    }
+    $element.persianDatepicker(options);
+}
+
+function removeDatepickerTooltips() {
+    const tooltipElements = document.querySelectorAll('.datepicker-plot-area [title]');
+    tooltipElements.forEach(el => el.removeAttribute('title'));
+}
+
+function isInsideDatepicker(element) {
+    let current = element;
+    while (current) {
+        if (current.classList && current.classList.contains('datepicker-plot-area')) {
+            return true;
+        }
+        current = current.parentElement;
+    }
+    return false;
+}
+
+function setupDatepickerTooltipCleanup() {
+    if (datepickerTooltipCleanupAttached) return;
+    document.addEventListener('mouseover', (event) => {
+        const target = event.target;
+        if (!target) return;
+        if (!isInsideDatepicker(target)) return;
+        if (typeof target.removeAttribute === 'function' && target.getAttribute && target.getAttribute('title')) {
+            target.removeAttribute('title');
+        }
+    }, true);
+    datepickerTooltipCleanupAttached = true;
+}
+
 // راه‌اندازی تقویم شمسی (فقط شمسی)
 function initializeDatePicker() {
     const dateInput = document.getElementById('date');
@@ -274,12 +314,7 @@ function initializeDatePicker() {
     
     const today = new persianDate();
     
-    // حذف datepicker قبلی اگر وجود دارد
-    if ($(dateInput).data('persianDatepicker')) {
-        $(dateInput).persianDatepicker('destroy');
-    }
-    
-    $(dateInput).persianDatepicker({
+    configureDatePickerInput(dateInput, {
         observer: true,
         format: 'YYYY/MM/DD',
         initialValue: true,
@@ -295,7 +330,9 @@ function initializeDatePicker() {
             gregorian: {
                 enabled: false
             }
-        }
+        },
+        onShow: removeDatepickerTooltips,
+        onSelect: removeDatepickerTooltips
     });
     
     dateInput.value = today.format('YYYY/MM/DD');
@@ -1379,62 +1416,42 @@ function applyCustomDateRange() {
 }
 
 // راه‌اندازی datepicker برای فیلتر بازه
-function initializeReportDatePickers() {
+function initializeReportDatePickers(autoApply = false) {
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
     
-    if (startDateInput && !$(startDateInput).data('persianDatepicker')) {
-        $(startDateInput).persianDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            initialValue: false,
-            calendarType: 'persian'
-        });
-    }
+    const handleSelect = () => {
+        removeDatepickerTooltips();
+        if (autoApply && startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+            applyCustomDateRange();
+        }
+    };
     
-    if (endDateInput && !$(endDateInput).data('persianDatepicker')) {
-        $(endDateInput).persianDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            initialValue: false,
-            calendarType: 'persian'
-        });
-    }
+    configureDatePickerInput(startDateInput, {
+        observer: true,
+        format: 'YYYY/MM/DD',
+        initialValue: false,
+        calendarType: 'persian',
+        onShow: removeDatepickerTooltips,
+        onSelect: handleSelect
+    });
+    
+    configureDatePickerInput(endDateInput, {
+        observer: true,
+        format: 'YYYY/MM/DD',
+        initialValue: false,
+        calendarType: 'persian',
+        onShow: removeDatepickerTooltips,
+        onSelect: handleSelect
+    });
 }
 
 // راه‌اندازی datepicker برای فیلدهای تاریخ در header
 function initializeDateRangePickers() {
+    initializeReportDatePickers(true);
     const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
-    
-    if (startDateInput && !$(startDateInput).data('persianDatepicker')) {
-        $(startDateInput).persianDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            initialValue: false,
-            calendarType: 'persian',
-            onSelect: () => {
-                // اگر هر دو تاریخ انتخاب شدند، گزارش را بارگذاری کن
-                if (startDateInput.value && endDateInput.value) {
-                    applyCustomDateRange();
-                }
-            }
-        });
-    }
-    
-    if (endDateInput && !$(endDateInput).data('persianDatepicker')) {
-        $(endDateInput).persianDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            initialValue: false,
-            calendarType: 'persian',
-            onSelect: () => {
-                // اگر هر دو تاریخ انتخاب شدند، گزارش را بارگذاری کن
-                if (startDateInput.value && endDateInput.value) {
-                    applyCustomDateRange();
-                }
-            }
-        });
+    if (startDateInput) {
+        startDateInput.focus();
     }
 }
 

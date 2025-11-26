@@ -861,6 +861,17 @@ textarea::placeholder {
     color: var(--text-light);
 }
 
+/* Persian datepicker overrides */
+.datepicker-plot-area,
+.datepicker-plot-area * {
+    font-family: 'Vazirmatn', sans-serif !important;
+    letter-spacing: normal;
+}
+
+.pwt-datepicker-input-element {
+    font-family: 'Vazirmatn', sans-serif !important;
+}
+
 .filter-btn:hover {
     border-color: var(--accent-yellow);
     color: var(--text-dark);
