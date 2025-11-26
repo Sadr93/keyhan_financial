@@ -273,31 +273,8 @@ function initializeDatePicker() {
     if (!dateInput) return;
     
     const today = new persianDate();
-    
-    // حذف datepicker قبلی اگر وجود دارد
-    if ($(dateInput).data('persianDatepicker')) {
-        $(dateInput).persianDatepicker('destroy');
-    }
-    
-    $(dateInput).persianDatepicker({
-        observer: true,
-        format: 'YYYY/MM/DD',
-        initialValue: true,
-        initialValueType: 'persian',
-        calendarType: 'persian',
-        timePicker: {
-            enabled: false
-        },
-        calendar: {
-            persian: {
-                enabled: true
-            },
-            gregorian: {
-                enabled: false
-            }
-        }
-    });
-    
+    dateInput.value = today.format('YYYY/MM/DD');
+
     dateInput.value = today.format('YYYY/MM/DD');
 }
 
@@ -328,6 +305,7 @@ function setupEventListeners() {
 function setupNavigation() {
     const navButtons = document.querySelectorAll('.nav-btn');
     const filterButtons = document.querySelectorAll('.filter-btn');
+    const reportFilters = document.querySelector('.report-filters');
     
     navButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -353,8 +331,13 @@ function setupNavigation() {
                 // نمایش فیلدهای تاریخ با انیمیشن
                 if (dateRangeInputs) {
                     dateRangeInputs.style.display = 'flex';
-                    // راه‌اندازی دیتاپیکرها
-                    initializeDateRangePickers();
+                    const firstInput = dateRangeInputs.querySelector('input');
+                    if (firstInput) {
+                        firstInput.focus();
+                    }
+                }
+                if (reportFilters) {
+                    reportFilters.classList.add('custom-active');
                 }
             } else {
                 // مخفی کردن فیلدهای تاریخ
@@ -363,6 +346,9 @@ function setupNavigation() {
                     // پاک کردن مقادیر
                     document.getElementById('startDate').value = '';
                     document.getElementById('endDate').value = '';
+                }
+                if (reportFilters) {
+                    reportFilters.classList.remove('custom-active');
                 }
                 loadReports(filter);
             }
@@ -934,11 +920,13 @@ async function loadReports(filterType) {
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
             
-            if (startDate && endDate) {
+            const startBoundary = getDateBoundaryTimestamp(startDate, 'start');
+            const endBoundary = getDateBoundaryTimestamp(endDate, 'end');
+            
+            if (startBoundary !== null && endBoundary !== null) {
                 filteredData = transactions.filter(t => {
-                    const dateParts = t.date.split('/');
-                    const dateStr = dateParts.join('/');
-                    return dateStr >= startDate && dateStr <= endDate;
+                    const transactionBoundary = getDateBoundaryTimestamp(t.date, 'start');
+                    return transactionBoundary !== null && transactionBoundary >= startBoundary && transactionBoundary <= endBoundary;
                 });
             }
         }
@@ -1380,62 +1368,65 @@ function applyCustomDateRange() {
 
 // راه‌اندازی datepicker برای فیلتر بازه
 function initializeReportDatePickers() {
+    if (typeof jalaliDatepicker === 'undefined') return;
+    
+    jalaliDatepicker.startWatch({
+        selector: '[data-jdp]',
+        autoHide: true,
+        hideAfterChange: true,
+        showTodayBtn: true,
+        showEmptyBtn: true,
+        useDropDownYears: true,
+        time: false,
+        persianDigits: false
+    });
+}
+
+function setupDateRangeInputListeners() {
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
     
-    if (startDateInput && !$(startDateInput).data('persianDatepicker')) {
-        $(startDateInput).persianDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            initialValue: false,
-            calendarType: 'persian'
-        });
+    if (startDateInput) {
+        startDateInput.addEventListener('change', handleDateRangeInputChange);
     }
     
-    if (endDateInput && !$(endDateInput).data('persianDatepicker')) {
-        $(endDateInput).persianDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            initialValue: false,
-            calendarType: 'persian'
-        });
+    if (endDateInput) {
+        endDateInput.addEventListener('change', handleDateRangeInputChange);
     }
 }
 
-// راه‌اندازی datepicker برای فیلدهای تاریخ در header
-function initializeDateRangePickers() {
-    const startDateInput = document.getElementById('startDate');
-    const endDateInput = document.getElementById('endDate');
+function handleDateRangeInputChange() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
     
-    if (startDateInput && !$(startDateInput).data('persianDatepicker')) {
-        $(startDateInput).persianDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            initialValue: false,
-            calendarType: 'persian',
-            onSelect: () => {
-                // اگر هر دو تاریخ انتخاب شدند، گزارش را بارگذاری کن
-                if (startDateInput.value && endDateInput.value) {
-                    applyCustomDateRange();
-                }
-            }
-        });
+    if (startDate && endDate) {
+        applyCustomDateRange();
+    }
+}
+
+function parsePersianDateString(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/').map(num => parseInt(num, 10));
+    if (parts.length !== 3 || parts.some(isNaN)) return null;
+    try {
+        return new persianDate(parts).toDate();
+    } catch (error) {
+        console.error('Parse Persian date error:', error);
+        return null;
+    }
+}
+
+function getDateBoundaryTimestamp(dateStr, boundary = 'start') {
+    const dateObj = parsePersianDateString(dateStr);
+    if (!dateObj) return null;
+    
+    if (boundary === 'start') {
+        dateObj.setHours(0, 0, 0, 0);
+    } else {
+        dateObj.setHours(23, 59, 59, 999);
     }
     
-    if (endDateInput && !$(endDateInput).data('persianDatepicker')) {
-        $(endDateInput).persianDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            initialValue: false,
-            calendarType: 'persian',
-            onSelect: () => {
-                // اگر هر دو تاریخ انتخاب شدند، گزارش را بارگذاری کن
-                if (startDateInput.value && endDateInput.value) {
-                    applyCustomDateRange();
-                }
-            }
-        });
-    }
+    return dateObj.getTime();
 }
 
 
@@ -1444,6 +1435,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         setupAmountInput();
         initializeReportDatePickers();
+        setupDateRangeInputListeners();
     }, 100);
 });
 
