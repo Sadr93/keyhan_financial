@@ -612,25 +612,41 @@ function setupAmountInput() {
     });
 }
 
-// ذخیره تراکنش
+// ذخیره ترانزاکشن
 async function saveTransaction(transaction) {
-    // اضافه کردن Audit Log
+    // اضافه کردن لاگ‌های حسابرسی
     if (currentUser) {
         transaction.createdBy = currentUser.id;
         transaction.createdByName = currentUser.name || currentUser.email;
     }
     
     if (!db) {
-        throw new Error('Firebase Firestore تنظیم نشده است. لطفاً Firebase را تنظیم کنید.');
+        console.error('❌ خطا: اتصال به پایگاه داده برقرار نیست');
+        throw new Error('Firebase Firestore تنظیم نشده است. لطفاً اتصال اینترنت و تنظیمات Firebase را بررسی کنید.');
     }
     
     try {
-        if (transaction.createdAt === undefined) {
-            transaction.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        }
-        await db.collection(COLLECTION_NAME).add(transaction);
+        // استفاده از زمان سرور برای تاریخ ایجاد
+        transaction.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        
+        // حذف فیلدهای خالی
+        Object.keys(transaction).forEach(key => {
+            if (transaction[key] === undefined || transaction[key] === '') {
+                delete transaction[key];
+            }
+        });
+        
+        console.log('💾 در حال ذخیره تراکنش جدید:', JSON.stringify(transaction, null, 2));
+        const docRef = await db.collection(COLLECTION_NAME).add(transaction);
+        console.log('✅ تراکنش با موفقیت ذخیره شد. شناسه سند:', docRef.id);
+        
+        return docRef.id;
     } catch (error) {
-        console.error('خطا در ذخیره Firebase:', error);
+        console.error('❌ خطا در ذخیره تراکنش در Firebase:', {
+            code: error.code,
+            message: error.message,
+            stack: error.stack
+        });
         throw error;
     }
 }
@@ -641,7 +657,8 @@ async function updateTransaction(id, transaction) {
     if (currentUser) {
         transaction.updatedBy = currentUser.id;
         transaction.updatedByName = currentUser.name || currentUser.email;
-        transaction.updatedAt = new Date().toISOString();
+        // استفاده از سرور تایم‌استمپ فایربیس برای تاریخ بروزرسانی
+        transaction.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
     }
     
     if (!db) {
@@ -713,15 +730,34 @@ async function getTransactions() {
         
         const transactions = [];
         snapshot.forEach(doc => {
-            const data = doc.data();
-            // فیلتر کردن تراکنش‌های حذف شده (soft delete)
-            if (!data.isDeleted) {
-                transactions.push({
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
-                    updatedAt: data.updatedAt ? data.updatedAt.toDate() : null
-                });
+            try {
+                const data = doc.data();
+                // فیلتر کردن تراکنش‌های حذف شده (soft delete)
+                if (!data.isDeleted) {
+                    const transaction = {
+                        id: doc.id,
+                        ...data,
+                        // تبدیل تاریخ‌ها به شیء تاریخ استاندارد
+                        createdAt: data.createdAt 
+                            ? (typeof data.createdAt.toDate === 'function' 
+                                ? data.createdAt.toDate() 
+                                : new Date(data.createdAt))
+                            : new Date(),
+                        updatedAt: data.updatedAt 
+                            ? (typeof data.updatedAt.toDate === 'function' 
+                                ? data.updatedAt.toDate() 
+                                : new Date(data.updatedAt))
+                            : null
+                    };
+                    
+                    // حذف فیلدهای undefined
+                    Object.keys(transaction).forEach(key => transaction[key] === undefined && delete transaction[key]);
+                    
+                    transactions.push(transaction);
+                }
+            } catch (error) {
+                console.error(`❌ خطا در پردازش سند ${doc.id}:`, error);
+                // در صورت بروز خطا، این سند را نادیده می‌گیریم و به کار ادامه می‌دهیم
             }
         });
         
