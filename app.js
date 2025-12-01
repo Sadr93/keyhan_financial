@@ -713,6 +713,14 @@ async function deleteTransaction(id) {
     }
 }
 
+// نمایش/مخفی کردن لودینگ
+function setLoading(isLoading) {
+    const loadingElement = document.getElementById('loadingIndicator');
+    if (loadingElement) {
+        loadingElement.style.display = isLoading ? 'flex' : 'none';
+    }
+}
+
 // دریافت تمام تراکنش‌ها
 async function getTransactions() {
     if (!db) {
@@ -722,6 +730,8 @@ async function getTransactions() {
     
     try {
         console.log('🔵 در حال خواندن تراکنش‌ها از Firebase...');
+        setLoading(true);
+        
         const snapshot = await db.collection(COLLECTION_NAME)
             .orderBy('createdAt', 'desc')
             .get();
@@ -762,11 +772,14 @@ async function getTransactions() {
         });
         
         console.log('✅ تعداد تراکنش‌های فعال:', transactions.length);
+        setLoading(false);
         return transactions;
     } catch (error) {
         console.error('❌ خطا در خواندن Firebase:', error);
         console.error('❌ کد خطا:', error.code);
         console.error('❌ پیام خطا:', error.message);
+        
+        setLoading(false);
         
         // نمایش پیام واضح‌تر
         if (error.code === 'permission-denied') {
@@ -1528,42 +1541,31 @@ function checkAuthState() {
                 }
                 
                 const userData = userDoc.data();
-                
-                if (!userData.approved) {
-                    console.warn('⚠️ کاربر تایید نشده است');
-                    await auth.signOut();
-                    currentUser = null;
-                    userRole = null;
-                    updatePageVisibility();
-                    showPendingApprovalMessage();
-                    return;
-                }
-                
-                // کاربر تایید شده است
                 currentUser = {
-                    id: user.uid,
+                    uid: user.uid,
                     email: user.email,
-                    name: userData.name
+                    ...userData
                 };
                 userRole = userData.role;
                 
-                console.log('✅ کاربر لاگین شده:', currentUser.email);
+                // به‌روزرسانی رابط کاربری
                 updateUIForAuth();
                 updatePageVisibility();
-                if (allTransactions.length === 0) {
+                
+                // بارگذاری اطلاعات اولیه
+                if (useFirebase) {
+                    getTransactions();
+                    loadReports('week');
+                } else {
                     loadTransactions();
                 }
+                
             } catch (error) {
-                console.error('❌ خطا در بررسی وضعیت کاربر:', error);
-                if (auth.currentUser) {
-                    await auth.signOut();
-                }
-                currentUser = null;
-                userRole = null;
-                updatePageVisibility();
+                console.error('❌ خطا در بارگذاری اطلاعات کاربر:', error);
+                showMessage('خطا در بارگذاری اطلاعات کاربر', 'error');
             }
         } else {
-            // کاربر لاگین نیست
+            // کاربر وارد نشده است
             currentUser = null;
             userRole = null;
             updatePageVisibility();
@@ -1571,7 +1573,28 @@ function checkAuthState() {
     });
 }
 
-// به‌روزرسانی نمایش صفحات بر اساس وضعیت لاگین
+// نمایش صفحه ورود
+function showLoginPage() {
+    const authPage = document.getElementById('authPage');
+    if (authPage) {
+        authPage.style.display = 'flex';
+    }
+    currentUser = null;
+    userRole = null;
+    updatePageVisibility();
+}
+
+// بارگذاری اطلاعات اولیه
+function loadInitialData() {
+    if (useFirebase) {
+        getTransactions();
+        loadReports('week');
+    } else {
+        loadTransactions();
+    }
+}
+
+// ==================== تابع نمایش/مخفی کردن صفحات بر اساس وضعیت احراز هویت ====================
 function updatePageVisibility() {
     const authPage = document.getElementById('authPage');
     const mainHeader = document.getElementById('mainHeader');
@@ -1697,11 +1720,14 @@ function setupAuthListeners() {
 }
 
 // ورود (Firebase)
-async function handleLogin(email, password) {
+async function handleLogin(email, password, isAutoLogin = false) {
     if (!auth) {
         showMessage('Firebase فعال نیست', 'error');
         return;
     }
+    
+    // حذف اطلاعات ذخیره شده قبلی
+    localStorage.removeItem('savedAuth');
     
     try {
         console.log('🔵 در حال ورود کاربر...');
@@ -1993,25 +2019,6 @@ function showPendingApprovalMessage() {
     }
 }
 
-// خروج
-async function handleLogout() {
-    if (!auth) return;
-    
-            try {
-                await auth.signOut();
-                currentUser = null;
-                userRole = null;
-                allTransactions = [];
-                filteredTransactions = [];
-                updateUIForAuth();
-                updatePageVisibility();
-                showMessage('خروج موفقیت‌آمیز بود', 'success');
-            } catch (error) {
-                console.error('خطا در خروج:', error);
-                showMessage('خطا در خروج', 'error');
-            }
-}
-
 // به‌روزرسانی UI بر اساس Authentication
 function updateUIForAuth() {
     const userInfo = document.getElementById('userInfo');
@@ -2048,6 +2055,27 @@ function canEdit() {
 
 function canDelete() {
     return userRole === 'admin';
+}
+
+async function handleLogout() {
+    try {
+        if (auth) {
+            await auth.signOut();
+        }
+        
+        // حذف اطلاعات ذخیره شده
+    } finally {
+        // حذف اطلاعات ذخیره شده در صورت خروج دستی
+        localStorage.removeItem('savedAuth');
+        currentUser = null;
+        userRole = null;
+        allTransactions = [];
+        filteredTransactions = [];
+        updateUIForAuth();
+        updatePageVisibility();
+        switchAuthTab('login');
+        showMessage('با موفقیت خارج شدید', 'success');
+    }
 }
 
 // ==================== User Management Functions ====================

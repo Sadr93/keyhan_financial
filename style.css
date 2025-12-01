@@ -18,6 +18,11 @@
     --border-color: #e5e7eb;
     --border-light: #f0f0f0;
     --success-color: #10b981;
+    
+    /* Loading Spinner */
+    --spinner-size: 40px;
+    --spinner-thickness: 4px;
+    --spinner-color: #4a90e2;
     --error-color: #ef4444;
     --income-color: #10b981;
     --expense-color: #ef4444;
