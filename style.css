@@ -541,8 +541,24 @@ header h1 {
     padding: 32px;
 }
 
+.transaction-form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.form-row .form-group.full-width {
+    grid-column: 1 / -1;
+}
+
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 0;
 }
 
 .form-group label {
@@ -1424,6 +1440,8 @@ textarea::placeholder {
     border-radius: var(--radius-lg);
     cursor: pointer;
     font-size: 0.85em;
+    font-weight: 600;
+    font-family: 'Vazirmatn', sans-serif;
     transition: all 0.3s ease;
     box-shadow: var(--shadow-sm);
 }

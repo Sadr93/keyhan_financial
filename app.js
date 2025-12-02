@@ -1,20 +1,22 @@
+const adminNavBtn = document.getElementById('adminNavBtn');
+const refreshUsersBtn = document.getElementById('refreshUsersBtn');
+
 // ساختار دسته‌بندی‌ها
-const categories = {
-    'درآمد': {
-        'اتاق‌ها': [],
-        'میز اختصاصی': [],
-        'میز اشتراکی': ['ماهانه', 'هفتگی', 'روزانه'],
-        'اتاق جلسات': ['رویداد', 'کلاس', 'رزرو'],
-        'اینترنت': [],
+let categories = {
+    'ورودی': {
+        'اجاره': ['اتاق اختصاصی', 'میز اختصاصی', 'میز اشتراکی ماهانه', 'میز اشتراکی هفتگی', 'میز اشتراکی روزانه'],
+        'خدمات جانبی': ['اتاق جلسه', 'اینترنت', 'سایر'],
+        'تسهیلات': [],
         'سایر': []
     },
-    'هزینه': {
-        'حقوق و دستمزد': ['پایه حقوق', 'اضافه کار'],
-        'قبوض': ['آب', 'برق', 'اینترنت', 'اجاره'],
-        'مصرفی‌ها': ['دستمال کاغذی', 'شوینده', 'چای و قند'],
-        'اقساط و چک': [],
+    'خروجی': {
+        'منابع انسانی': ['حقوق', 'عیدی و پاداش', 'بیمه'],
+        'آبونمان': ['قبض برق', 'قبض آب', 'اینترنت', 'تلفن', 'سایر'],
+        'اجاره': [],
+        'مصرفی': ['ملزومات بهداشتی', 'شوینده و پاک‌کننده', 'یکبار مصرف', 'پذیرایی', 'لوازم اداری'],
         'تعمیر و نگهداری': [],
-        'سایر': []
+        'بازپرداخت': [],
+        'مالیات و هزینه‌های قانونی': []
     }
 };
 
@@ -55,6 +57,7 @@ function generateTransactionNumber() {
 let useFirebase = false;
 let allTransactions = [];
 let filteredTransactions = [];
+let cachedUsers = [];
 
 // Authentication state - استفاده از Firebase
 let currentUser = null;
@@ -90,6 +93,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // بررسی وضعیت Authentication (Firebase)
     checkAuthState();
+    
+    // حذف تمام تراکنش‌های قدیم (یک بار در شروع)
+    await deleteAllOldTransactions();
     
     initializeDatePicker();
     setupEventListeners();
@@ -142,6 +148,33 @@ async function checkFirestoreConnection() {
         }
         console.warn('⚠️ خطا در بررسی Firestore:', error);
         return false;
+    }
+}
+
+// حذف تمام تراکنش‌های قدیم (برای مطابقت با دسته‌بندی جدید)
+async function deleteAllOldTransactions() {
+    if (!db || !useFirebase) return;
+    
+    try {
+        const snapshot = await db.collection(COLLECTION_NAME).get();
+        
+        if (snapshot.empty) {
+            console.log('✅ هیچ تراکنش قدیمی برای حذف وجود ندارد');
+            return;
+        }
+        
+        console.log(`🔵 در حال حذف ${snapshot.size} تراکنش قدیم...`);
+        
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        
+        await batch.commit();
+        console.log(`✅ تمام ${snapshot.size} تراکنش قدیم حذف شدند`);
+    } catch (error) {
+        console.error('⚠️ خطا در حذف تراکنش‌های قدیم:', error);
+        // این خطا مهم نیست، ادامه می‌دهیم
     }
 }
 
@@ -359,6 +392,13 @@ function setupEventListeners() {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModalFunc();
     });
+    
+    if (refreshUsersBtn) {
+        refreshUsersBtn.addEventListener('click', () => {
+            loadAdminUsers(true);
+        });
+    }
+    
 }
 
 // تنظیم ناوبری بین صفحات
@@ -411,13 +451,20 @@ function setupNavigation() {
 function switchPage(page) {
     const transactionsPage = document.getElementById('transactionsPage');
     const reportsPage = document.getElementById('reportsPage');
-    if (page === 'transactions') {
+    const adminPage = document.getElementById('adminPage');
+    
+    if (transactionsPage) transactionsPage.style.display = 'none';
+    if (reportsPage) reportsPage.style.display = 'none';
+    if (adminPage) adminPage.style.display = 'none';
+    
+    if (page === 'transactions' && transactionsPage) {
         transactionsPage.style.display = 'block';
-        reportsPage.style.display = 'none';
-    } else if (page === 'reports') {
-        transactionsPage.style.display = 'none';
+    } else if (page === 'reports' && reportsPage) {
         reportsPage.style.display = 'block';
         loadReports('all');
+    } else if (page === 'admin' && adminPage) {
+        adminPage.style.display = 'block';
+        loadAdminPanelData();
     }
 }
 
@@ -426,9 +473,11 @@ function updateCategories() {
     const type = document.getElementById('type').value;
     const categorySelect = document.getElementById('category');
     const subcategorySelect = document.getElementById('subcategory');
+    const subcategoryGroup = document.getElementById('subcategoryGroup');
     
     categorySelect.innerHTML = '<option value="">انتخاب کنید...</option>';
     subcategorySelect.innerHTML = '<option value="">-- بدون زیردسته --</option>';
+    subcategoryGroup.style.display = 'none';
     
     if (type && categories[type]) {
         Object.keys(categories[type]).forEach(cat => {
@@ -446,19 +495,29 @@ function updateSubcategories() {
     const type = document.getElementById('type').value;
     const category = document.getElementById('category').value;
     const subcategorySelect = document.getElementById('subcategory');
+    const subcategoryGroup = document.getElementById('subcategoryGroup');
     
     subcategorySelect.innerHTML = '<option value="">-- بدون زیردسته --</option>';
     
     if (type && category && categories[type] && categories[type][category]) {
         const subcategories = categories[type][category];
         if (subcategories.length > 0) {
+            // نمایش گروه زیردسته
+            subcategoryGroup.style.display = 'block';
             subcategories.forEach(sub => {
                 const option = document.createElement('option');
                 option.value = sub;
                 option.textContent = sub;
                 subcategorySelect.appendChild(option);
             });
+        } else {
+            // مخفی کردن گروه زیردسته اگر زیردسته‌ای نداشت
+            subcategoryGroup.style.display = 'none';
+            subcategorySelect.value = '';
         }
+    } else {
+        // مخفی کردن گروه زیردسته
+        subcategoryGroup.style.display = 'none';
     }
 }
 
@@ -490,6 +549,7 @@ function openModal(transaction = null) {
         editId.value = '';
         form.reset();
         document.getElementById('accountingRegistered').checked = false;
+        document.getElementById('subcategoryGroup').style.display = 'none';
         initializeDatePicker();
     }
     
@@ -547,18 +607,18 @@ async function handleFormSubmit(e) {
     }
 }
 
+// نقشه‌های تبدیل اعداد
+const PERSIAN_NUMBERS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+const ENGLISH_NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
 // تبدیل مبلغ به عدد (پشتیبانی از فارسی و انگلیسی)
 function parseAmount(value) {
     if (!value) return 0;
     
-    // تبدیل اعداد فارسی به انگلیسی
-    const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-    const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    
     let cleaned = value.toString().replace(/,/g, '').trim();
     
-    persianNumbers.forEach((persian, index) => {
-        cleaned = cleaned.replace(new RegExp(persian, 'g'), englishNumbers[index]);
+    PERSIAN_NUMBERS.forEach((persian, index) => {
+        cleaned = cleaned.replace(new RegExp(persian, 'g'), ENGLISH_NUMBERS[index]);
     });
     
     return parseInt(cleaned) || 0;
@@ -566,19 +626,27 @@ function parseAmount(value) {
 
 // تبدیل اعداد انگلیسی به فارسی
 function toPersianNumbers(str) {
-    const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-    
     let result = str.toString();
-    englishNumbers.forEach((eng, index) => {
-        result = result.replace(new RegExp(eng, 'g'), persianNumbers[index]);
+    ENGLISH_NUMBERS.forEach((eng, index) => {
+        result = result.replace(new RegExp(eng, 'g'), PERSIAN_NUMBERS[index]);
     });
     return result;
 }
 
 // فرمت کردن عدد با جدا کردن ارقام و تبدیل به فارسی
 function formatNumber(num) {
-    const formatted = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (num === undefined || num === null || num === '') {
+        return '۰';
+    }
+    let numericValue = num;
+    if (typeof numericValue === 'string') {
+        numericValue = numericValue.replace(/,/g, '').replace(/[^\d.-]/g, '');
+    }
+    numericValue = Number(numericValue);
+    if (Number.isNaN(numericValue)) {
+        numericValue = 0;
+    }
+    const formatted = Math.trunc(numericValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return toPersianNumbers(formatted);
 }
 
@@ -654,7 +722,7 @@ async function saveTransaction(transaction) {
 // بروزرسانی تراکنش
 async function updateTransaction(id, transaction) {
     // اضافه کردن Audit Log
-    if (currentUser) {
+    if (currentUser && currentUser.id) {
         transaction.updatedBy = currentUser.id;
         transaction.updatedByName = currentUser.name || currentUser.email;
         // استفاده از سرور تایم‌استمپ فایربیس برای تاریخ بروزرسانی
@@ -690,14 +758,11 @@ async function deleteTransaction(id) {
     }
     
     try {
-        // اضافه کردن Audit Log قبل از حذف
-        if (currentUser) {
-            const deletedBy = currentUser.id;
-            const deletedByName = currentUser.name || currentUser.email;
-            // ذخیره اطلاعات حذف در document (soft delete)
+        // اضافه کردن Audit Log قبل از حذف (soft delete)
+        if (currentUser && currentUser.id) {
             await db.collection(COLLECTION_NAME).doc(id).update({
-                deletedBy: deletedBy,
-                deletedByName: deletedByName,
+                deletedBy: currentUser.id,
+                deletedByName: currentUser.name || currentUser.email,
                 deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 isDeleted: true
             });
@@ -838,12 +903,18 @@ function renderTable() {
         return;
     }
     
-    tbody.innerHTML = filteredTransactions.map(transaction => `
-        <tr class="transaction-row ${transaction.type === 'درآمد' ? 'income-row' : 'expense-row'}">
+    tbody.innerHTML = filteredTransactions.map(transaction => {
+        // تشکیل دسته‌بندی
+        let category = transaction.category || '-';
+        if (transaction.subcategory) {
+            category = `${transaction.category} / ${transaction.subcategory}`;
+        }
+        
+        return `
+        <tr class="transaction-row ${transaction.type === 'ورودی' ? 'income-row' : 'expense-row'}">
             <td class="transaction-number-cell">${transaction.transactionNumber ? toPersianNumbers(transaction.transactionNumber) : '-'}</td>
             <td>${transaction.date}</td>
-            <td>${transaction.category}</td>
-            <td>${transaction.subcategory || '-'}</td>
+            <td>${category}</td>
             <td class="amount-cell">${formatNumber(transaction.amount)}</td>
             <td>${transaction.description || '-'}</td>
             <td class="accounting-checkbox-cell">
@@ -860,7 +931,8 @@ function renderTable() {
                 ${canDelete() ? `<button class="btn-delete" onclick="deleteTransaction('${transaction.id}')">حذف</button>` : ''}
             </td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // تغییر وضعیت ثبت حسابداری
@@ -965,43 +1037,7 @@ function showMessage(text, type) {
 window.editTransaction = editTransaction;
 window.deleteTransaction = deleteTransaction;
 window.applyCustomDateRange = applyCustomDateRange;
-window.toggleCategory = toggleCategory;
 
-// باز و بسته کردن دسته
-function toggleCategory(categoryId) {
-    const subcategoryRows = document.querySelectorAll(`.subcategory-row[data-parent="${categoryId}"]`);
-    const categoryRow = document.querySelector(`.category-row[data-category-id="${categoryId}"]`);
-    const expandIcon = categoryRow ? categoryRow.querySelector('.expand-icon') : null;
-    const categoryIcon = categoryRow ? categoryRow.querySelector('.category-icon') : null;
-    
-    if (!categoryRow || subcategoryRows.length === 0) return;
-    
-    const isExpanded = subcategoryRows[0].style.display !== 'none';
-    
-    if (isExpanded) {
-        // بستن
-        subcategoryRows.forEach(row => {
-            row.style.display = 'none';
-        });
-        if (expandIcon) {
-            expandIcon.textContent = '▼';
-        }
-        if (categoryIcon) {
-            categoryIcon.textContent = '📂';
-        }
-    } else {
-        // باز کردن
-        subcategoryRows.forEach(row => {
-            row.style.display = 'table-row';
-        });
-        if (expandIcon) {
-            expandIcon.textContent = '▲';
-        }
-        if (categoryIcon) {
-            categoryIcon.textContent = '📂';
-        }
-    }
-}
 
 // متغیرهای نمودار
 let incomeExpenseChart = null;
@@ -1050,7 +1086,7 @@ function calculateSummary(transactions) {
     let totalCount = transactions.length;
     
     transactions.forEach(t => {
-        if (t.type === 'درآمد') {
+        if (t.type === 'ورودی') {
             totalIncome += t.amount || 0;
         } else {
             totalExpense += t.amount || 0;
@@ -1074,13 +1110,13 @@ function drawCharts(transactions) {
             incomeExpenseChart.destroy();
         }
         
-        const incomeData = transactions.filter(t => t.type === 'درآمد').reduce((sum, t) => sum + (t.amount || 0), 0);
-        const expenseData = transactions.filter(t => t.type === 'هزینه').reduce((sum, t) => sum + (t.amount || 0), 0);
+        const incomeData = transactions.filter(t => t.type === 'ورودی').reduce((sum, t) => sum + (t.amount || 0), 0);
+        const expenseData = transactions.filter(t => t.type === 'خروجی').reduce((sum, t) => sum + (t.amount || 0), 0);
         
         incomeExpenseChart = new Chart(incomeExpenseCtx, {
             type: 'bar',
             data: {
-                labels: ['درآمد', 'هزینه'],
+                labels: ['ورودی', 'خروجی'],
                 datasets: [{
                     label: 'مبلغ (تومان)',
                     data: [incomeData, expenseData],
@@ -1119,7 +1155,7 @@ function drawCharts(transactions) {
             incomeCategoryChart.destroy();
         }
         
-        const incomeTransactions = transactions.filter(t => t.type === 'درآمد');
+        const incomeTransactions = transactions.filter(t => t.type === 'ورودی');
         const categoryData = {};
         
         incomeTransactions.forEach(t => {
@@ -1169,7 +1205,7 @@ function drawCharts(transactions) {
             expenseCategoryChart.destroy();
         }
         
-        const expenseTransactions = transactions.filter(t => t.type === 'هزینه');
+        const expenseTransactions = transactions.filter(t => t.type === 'خروجی');
         const categoryData = {};
         
         expenseTransactions.forEach(t => {
@@ -1231,7 +1267,7 @@ function drawCharts(transactions) {
                 };
             }
             
-            if (t.type === 'درآمد') {
+            if (t.type === 'ورودی') {
                 dateData[date].income += t.amount || 0;
             } else {
                 dateData[date].expense += t.amount || 0;
@@ -1257,7 +1293,7 @@ function drawCharts(transactions) {
                     labels: sortedDates,
                     datasets: [
                         {
-                            label: 'درآمد',
+                            label: 'ورودی',
                             data: incomeData,
                             borderColor: 'rgba(16, 185, 129, 1)',
                             backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -1268,7 +1304,7 @@ function drawCharts(transactions) {
                             pointHoverRadius: 6
                         },
                         {
-                            label: 'هزینه',
+                            label: 'خروجی',
                             data: expenseData,
                             borderColor: 'rgba(239, 68, 68, 1)',
                             backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -1306,9 +1342,9 @@ function renderReportsTables(transactions) {
     
     if (!incomeTbody || !expenseTbody) return;
     
-    // جدا کردن درآمدها و هزینه‌ها
-    const incomeTransactions = transactions.filter(t => t.type === 'درآمد');
-    const expenseTransactions = transactions.filter(t => t.type === 'هزینه');
+    // جدا کردن ورودی‌ها و خروجی‌ها
+    const incomeTransactions = transactions.filter(t => t.type === 'ورودی');
+    const expenseTransactions = transactions.filter(t => t.type === 'خروجی');
     
     // ساختار درختی برای درآمدها
     const incomeTree = {};
@@ -1554,7 +1590,7 @@ function checkAuthState() {
                 
                 // بارگذاری اطلاعات اولیه
                 if (useFirebase) {
-                    getTransactions();
+                    loadTransactions();
                     loadReports('week');
                 } else {
                     loadTransactions();
@@ -1599,6 +1635,7 @@ function updatePageVisibility() {
     const authPage = document.getElementById('authPage');
     const mainHeader = document.getElementById('mainHeader');
     const mainContent = document.getElementById('mainContent');
+    const adminNavBtn = document.getElementById('adminNavBtn');
     
     // بررسی وضعیت فعلی کاربر (Firebase)
     const isLoggedIn = currentUser !== null;
@@ -1608,13 +1645,222 @@ function updatePageVisibility() {
         if (authPage) authPage.style.display = 'none';
         if (mainHeader) mainHeader.style.display = 'block';
         if (mainContent) mainContent.style.display = 'block';
+        if (adminNavBtn) adminNavBtn.style.display = userRole === 'admin' ? 'inline-flex' : 'none';
     } else {
         // کاربر لاگین نکرده - نمایش صفحه ورود
         if (authPage) authPage.style.display = 'flex';
         if (mainHeader) mainHeader.style.display = 'none';
         if (mainContent) mainContent.style.display = 'none';
+        if (adminNavBtn) adminNavBtn.style.display = 'none';
     }
 }
+
+function loadAdminPanelData(forceReload = false) {
+    if (userRole !== 'admin') return;
+    loadAdminUsers(forceReload);
+}
+
+async function loadAdminUsers(force = false) {
+    const usersList = document.getElementById('usersList');
+    if (!usersList || !db) return;
+    
+    if (!force && cachedUsers.length) {
+        renderUsersList(cachedUsers);
+        return;
+    }
+    
+    usersList.innerHTML = '<div class="admin-empty-state">در حال بارگذاری کاربران...</div>';
+    
+    try {
+        const snapshot = await db.collection('users').orderBy('createdAt', 'desc').get();
+        cachedUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderUsersList(cachedUsers);
+    } catch (error) {
+        console.error('خطا در بارگذاری کاربران:', error);
+        showMessage('خطا در بارگذاری کاربران', 'error');
+        usersList.innerHTML = '<div class="admin-empty-state">خطا در بارگذاری کاربران</div>';
+    }
+}
+
+function renderUsersList(users) {
+    const container = document.getElementById('usersList');
+    if (!container) return;
+    
+    if (!users.length) {
+        container.innerHTML = '<div class="admin-empty-state">کاربری یافت نشد</div>';
+        return;
+    }
+    
+    container.innerHTML = users.map(user => `
+        <div class="admin-user-card">
+            <div class="admin-user-header">
+                <div class="admin-user-info">
+                    <span class="admin-user-name">${user.name || '-'}</span>
+                    <span class="admin-user-email">${user.email || '-'}</span>
+                </div>
+                <div class="admin-chip ${user.approved ? 'admin-chip-status approved' : 'admin-chip-status'}">
+                    ${user.approved ? 'تایید شده' : 'در انتظار تایید'}
+                </div>
+            </div>
+            <div class="admin-user-body">
+                <div class="admin-role-wrapper">
+                    <button onclick="saveUserRole('${user.id}')" class="btn-save">اعمال</button>
+                    <select id="role-${user.id}" ${userRole !== 'admin' ? 'disabled' : ''}>
+                        <option value="viewer" ${user.role === 'viewer' ? 'selected' : ''}>مشاهده‌گر</option>
+                        <option value="editor" ${user.role === 'editor' ? 'selected' : ''}>ویرایش‌گر</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>مدیر</option>
+                    </select>
+                </div>
+                <div class="admin-user-actions">
+                    ${!user.approved ? `<button onclick="approveUser('${user.id}')" class="btn-primary">تایید</button>` : ''}
+                    ${user.approved ? `<button onclick="toggleUserApproval('${user.id}', false)" class="btn-secondary">رد</button>` : ''}
+                    <button onclick="sendPasswordReset('${user.email}')" class="btn-link">ارسال لینک رمز</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function saveUserRole(userId) {
+    if (!db || userRole !== 'admin') return;
+    const roleSelect = document.getElementById(`role-${userId}`);
+    if (!roleSelect) return;
+    
+    const newRole = roleSelect.value;
+    try {
+        await db.collection('users').doc(userId).update({ role: newRole });
+        showMessage('نقش کاربر با موفقیت تغییر کرد', 'success');
+        cachedUsers = cachedUsers.map(user => user.id === userId ? { ...user, role: newRole } : user);
+        renderUsersList(cachedUsers);
+    } catch (error) {
+        console.error('خطا در تغییر نقش کاربر:', error);
+        showMessage('خطا در تغییر نقش کاربر', 'error');
+    }
+}
+
+async function approveUser(userId) {
+    await toggleUserApproval(userId, true);
+}
+
+async function toggleUserApproval(userId, approved) {
+    if (!db || userRole !== 'admin') return;
+    try {
+        if (approved) {
+            const updateObj = {
+                approved: true,
+                approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            if (currentUser && currentUser.id) {
+                updateObj.approvedBy = currentUser.id;
+            }
+            await db.collection('users').doc(userId).update(updateObj);
+        } else {
+            await db.collection('users').doc(userId).update({
+                approved: false
+            });
+        }
+        showMessage(approved ? 'کاربر تایید شد' : 'تایید کاربر لغو شد', 'success');
+        cachedUsers = cachedUsers.map(user => user.id === userId ? { ...user, approved } : user);
+        renderUsersList(cachedUsers);
+    } catch (error) {
+        console.error('خطا در بروزرسانی وضعیت کاربر:', error);
+        showMessage('خطا در بروزرسانی وضعیت کاربر', 'error');
+    }
+}
+
+async function sendPasswordReset(email) {
+    if (!auth || userRole !== 'admin') return;
+    try {
+        await auth.sendPasswordResetEmail(email);
+        showMessage('لینک بازنشانی رمز برای کاربر ارسال شد', 'success');
+    } catch (error) {
+        console.error('خطا در ارسال ایمیل بازنشانی:', error);
+        showMessage('خطا در ارسال ایمیل بازنشانی', 'error');
+    }
+}
+
+
+async function loadTransactionLogs(force = false) {
+    if (!db || userRole !== 'admin') return;
+    if (cachedLogs.length && !force) {
+        renderLogsTable(cachedLogs);
+        return;
+    }
+    
+    try {
+        const snapshot = await db.collection(COLLECTION_NAME)
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get();
+        cachedLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderLogsTable(cachedLogs);
+    } catch (error) {
+        console.error('خطا در بارگذاری لاگ تراکنش‌ها:', error);
+        showMessage('خطا در بارگذاری لاگ تراکنش‌ها', 'error');
+    }
+}
+
+function renderLogsTable(logs) {
+    const tbody = document.querySelector('#transactionLogsTable tbody');
+    if (!tbody) return;
+    
+    if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">داده‌ای موجود نیست</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = logs.map(log => {
+        const events = [];
+        if (log.createdBy) {
+            events.push({ action: 'ایجاد', user: log.createdByName, time: log.createdAt });
+        }
+        if (log.updatedBy) {
+            events.push({ action: 'ویرایش', user: log.updatedByName, time: log.updatedAt });
+        }
+        if (log.deletedBy) {
+            events.push({ action: 'حذف', user: log.deletedByName, time: log.deletedAt });
+        }
+        
+        // تشکیل دسته‌بندی
+        let category = log.category || '-';
+        if (log.subcategory) {
+            category = `${log.category} / ${log.subcategory}`;
+        }
+        
+        // تشکیل جزئیات تغییرات
+        const details = [];
+        if (log.amount) details.push(`مبلغ: ${formatNumber(log.amount)}`);
+        if (log.description) details.push(`توضیح: ${log.description}`);
+        if (log.type) details.push(`نوع: ${log.type === 'income' ? 'درآمد' : 'هزینه'}`);
+        const detailsText = details.length > 0 ? details.join(' | ') : '-';
+        
+        return events.map(event => `
+            <tr>
+                <td>${log.transactionNumber || '-'}</td>
+                <td>${category}</td>
+                <td>${event.action}</td>
+                <td>${event.user || '-'}</td>
+                <td>${event.time ? formatDateTime(event.time) : '-'}</td>
+                <td class="details-cell">${detailsText}</td>
+            </tr>
+        `).join('');
+    }).join('');
+}
+
+function formatDateTime(timestamp) {
+    if (!timestamp) return '-';
+    try {
+        const date = typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
+        return date.toLocaleString('fa-IR');
+    } catch (error) {
+        return '-';
+    }
+}
+
+window.saveUserRole = saveUserRole;
+window.approveUser = approveUser;
+window.toggleUserApproval = toggleUserApproval;
+window.sendPasswordReset = sendPasswordReset;
 
 // بارگذاری نقش کاربر
 async function loadUserRole(userId) {
@@ -1701,14 +1947,13 @@ function setupAuthListeners() {
             const name = document.getElementById('registerName').value;
             const email = document.getElementById('registerEmail').value;
             const password = document.getElementById('registerPassword').value;
-            const role = document.getElementById('registerRole').value;
             
-            if (!name || !email || !password || !role) {
+            if (!name || !email || !password) {
                 showMessage('لطفاً تمام فیلدها را پر کنید', 'error');
                 return;
             }
             
-            await handleRegister(name, email, password, role);
+            await handleRegister(name, email, password);
         });
     }
     
@@ -1787,8 +2032,8 @@ async function handleLogin(email, password, isAutoLogin = false) {
 }
 
 // ثبت‌نام
-async function handleRegister(name, email, password, role) {
-    console.log('🔵 شروع ثبت‌نام:', { name, email, role });
+async function handleRegister(name, email, password) {
+    console.log('🔵 شروع ثبت‌نام:', { name, email });
     
     if (!auth || !db) {
         console.error('❌ Firebase فعال نیست');
@@ -1809,13 +2054,13 @@ async function handleRegister(name, email, password, role) {
             console.log('🔵 در حال بررسی کاربران موجود...');
             const usersSnapshot = await db.collection('users').get();
             isFirstUser = usersSnapshot.empty;
-            shouldAutoApprove = isFirstUser && role === 'admin';
+            shouldAutoApprove = isFirstUser;
             console.log('✅ بررسی کاربران انجام شد:', { isFirstUser, shouldAutoApprove });
         } catch (error) {
             console.warn('⚠️ خطا در بررسی کاربران موجود:', error);
             // اگر خطا داد، فرض می‌کنیم که اولین کاربر است
             isFirstUser = true;
-            shouldAutoApprove = role === 'admin';
+            shouldAutoApprove = true;
             console.log('⚠️ فرض می‌کنیم اولین کاربر است:', { isFirstUser, shouldAutoApprove });
         }
         
@@ -1825,8 +2070,8 @@ async function handleRegister(name, email, password, role) {
             const userData = {
                 name: name,
                 email: email,
-                role: role,
-                approved: false, // Security Rules اجازه approved: true در create نمی‌دهد
+                role: shouldAutoApprove ? 'admin' : 'viewer',
+                approved: shouldAutoApprove,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             console.log('🔵 داده‌های کاربر:', userData);
@@ -1892,40 +2137,25 @@ async function handleRegister(name, email, password, role) {
             throw firestoreError; // خطا را به catch اصلی بفرست
         }
         
-        // اگر اولین admin است، خودش را approve می‌کند
         if (shouldAutoApprove) {
-            try {
-                await db.collection('users').doc(userCredential.user.uid).update({
-                    approved: true,
-                    approvedBy: userCredential.user.uid,
-                    approvedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                showMessage('✅ ثبت‌نام با موفقیت انجام شد! شما به عنوان اولین مدیر سیستم تایید شدید.', 'success');
-                await loadUserRole(userCredential.user.uid);
-                updateUIForAuth();
-                updatePageVisibility();
-                switchPage('transactions');
-                loadTransactions();
-                return;
-            } catch (updateError) {
-                console.error('خطا در approve کردن اولین admin:', updateError);
-                // اگر update خطا داد، کاربر باید منتظر بماند
-                showMessage('⚠️ ثبت‌نام انجام شد اما تایید خودکار با خطا مواجه شد. لطفاً منتظر تایید مدیر بمانید.', 'error');
-            }
+            showMessage('✅ ثبت‌نام با موفقیت انجام شد و به عنوان مدیر تایید شدید.', 'success');
+            currentUser = {
+                id: userCredential.user.uid,
+                email: userCredential.user.email,
+                name
+            };
+            userRole = 'admin';
+            updateUIForAuth();
+            updatePageVisibility();
+            switchPage('transactions');
+            loadTransactions();
+        } else {
+            await auth.signOut();
+            currentUser = null;
+            userRole = null;
+            await new Promise(resolve => setTimeout(resolve, 300));
+            showMessage('ثبت‌نام انجام شد. لطفاً منتظر تایید مدیر بمانید.', 'success');
         }
-        
-        // خروج خودکار بعد از ثبت‌نام (برای کاربران عادی)
-        await auth.signOut();
-        
-        // تنظیم currentUser به null
-        currentUser = null;
-        userRole = null;
-        
-        // صبر کردن تا signOut کامل شود
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        // این بخش دیگر استفاده نمی‌شود - ثبت‌نام از طریق سایت حذف شده است
         
     } catch (error) {
         console.error('❌ خطا در ثبت‌نام:', error);

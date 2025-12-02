@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سیستم مالی کیهان</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin-styles.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
     <!-- فونت فارسی -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,8 +30,9 @@
                     <img src="Keyhan Logo Kit-29.png" alt="کیهان" class="logo-image">
                 </div>
                 <nav class="main-nav">
-                    <button class="nav-btn active" data-page="transactions">لیست تراکنش‌ها</button>
+                    <button class="nav-btn" data-page="transactions">لیست تراکنش‌ها</button>
                     <button class="nav-btn" data-page="reports">گزارشات</button>
+                    <button class="nav-btn" data-page="admin" id="adminNavBtn" style="display: none;">مدیریت</button>
                     <div class="user-info" id="userInfo" style="display: none;">
                         <span id="userName"></span>
                         <button id="logoutBtn" class="btn-logout">خروج</button>
@@ -161,19 +163,6 @@
                                 </div>
                             </div>
                             
-                            <div class="form-group">
-                                <label for="registerRole" class="form-label">
-                                    <span class="label-icon">🎭</span>
-                                    <span>نقش</span>
-                                </label>
-                                <select id="registerRole" name="role" class="form-select" required>
-                                    <option value="">انتخاب کنید...</option>
-                                    <option value="viewer">مشاهده‌گر</option>
-                                    <option value="editor">ویرایش‌گر</option>
-                                    <option value="admin">مدیر</option>
-                                </select>
-                            </div>
-                            
                             <div class="form-actions">
                                 <button type="submit" class="auth-submit-btn">
                                     <span>ثبت‌نام</span>
@@ -212,8 +201,7 @@
                                 <tr>
                                     <th>شماره تراکنش</th>
                                     <th>تاریخ</th>
-                                    <th>دسته</th>
-                                    <th>زیردسته</th>
+                                    <th>دسته‌بندی</th>
                                     <th class="amount-header">مبلغ (تومان)</th>
                                     <th>توضیحات</th>
                                     <th>ثبت حسابداری</th>
@@ -341,6 +329,28 @@
                 </div>
             </main>
 
+            <!-- صفحه مدیریت -->
+            <main class="main-content" id="adminPage" style="display: none;">
+                <div class="admin-content">
+                    <!-- بخش مدیریت کاربران -->
+                    <section class="admin-section">
+                        <div class="admin-section-header">
+                            <div class="admin-section-title">
+                                <div>
+                                    <h2>مدیریت کاربران</h2>
+                                    <p>تعیین نقش و وضعیت دسترسی کاربران</p>
+                                </div>
+                            </div>
+                            <button id="refreshUsersBtn" class="btn-refresh">به‌روزرسانی</button>
+                        </div>
+                        <div id="usersList" class="admin-user-grid">
+                            <div class="admin-loading">در حال بارگذاری کاربران...</div>
+                        </div>
+                    </section>
+
+                </div>
+            </main>
+
         </div>
 
         <!-- Modal ثبت/ویرایش تراکنش -->
@@ -350,51 +360,58 @@
                     <h2 id="modalTitle">ثبت تراکنش جدید</h2>
                     <button class="modal-close" id="closeModal">&times;</button>
                 </div>
-                <form id="transactionForm">
+                <form id="transactionForm" class="transaction-form-grid">
                     <input type="hidden" id="editTransactionId">
-                    <div class="form-group">
-                        <label for="date">تاریخ:</label>
-                        <input type="text" id="date" name="date" class="date-input" required readonly>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="date">تاریخ:</label>
+                            <input type="text" id="date" name="date" class="date-input" required readonly>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="type">نوع:</label>
+                            <select id="type" name="type" required>
+                                <option value="">انتخاب کنید...</option>
+                                <option value="ورودی">ورودی</option>
+                                <option value="خروجی">خروجی</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category">دسته:</label>
+                            <select id="category" name="category" required>
+                                <option value="">ابتدا نوع را انتخاب کنید</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="subcategoryGroup" style="display: none;">
+                            <label for="subcategory">زیردسته:</label>
+                            <select id="subcategory" name="subcategory">
+                                <option value="">-- بدون زیردسته --</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="amount">مبلغ (تومان):</label>
+                            <input type="text" id="amount" name="amount" class="amount-input" required placeholder="0">
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="type">نوع:</label>
-                        <select id="type" name="type" required>
-                            <option value="">انتخاب کنید...</option>
-                            <option value="درآمد">درآمد</option>
-                            <option value="هزینه">هزینه</option>
-                        </select>
+                    <div class="form-row">
+                        <div class="form-group full-width">
+                            <label for="description">توضیحات:</label>
+                            <textarea id="description" name="description" rows="2"></textarea>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="category">دسته:</label>
-                        <select id="category" name="category" required>
-                            <option value="">ابتدا نوع را انتخاب کنید</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="subcategory">زیردسته:</label>
-                        <select id="subcategory" name="subcategory">
-                            <option value="">-- بدون زیردسته --</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="amount">مبلغ (تومان):</label>
-                        <input type="text" id="amount" name="amount" class="amount-input" required placeholder="0">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="description">توضیحات:</label>
-                        <textarea id="description" name="description" rows="3"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="accountingRegistered" class="checkbox-label">
-                            <input type="checkbox" id="accountingRegistered" name="accountingRegistered">
-                            <span>ثبت حسابداری</span>
-                        </label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accountingRegistered" class="checkbox-label">
+                                <input type="checkbox" id="accountingRegistered" name="accountingRegistered">
+                                <span>ثبت حسابداری</span>
+                            </label>
+                        </div>
                     </div>
 
                     <div class="modal-actions">

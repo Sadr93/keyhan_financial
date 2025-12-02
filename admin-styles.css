@@ -1,0 +1,314 @@
+/* صفحه مدیریت - طراحی جدید */
+.admin-page-header {
+    padding: 32px;
+    background: linear-gradient(135deg, var(--header-dark) 0%, #1a1a1a 100%);
+    color: white;
+    margin-bottom: 32px;
+    border-bottom: 3px solid var(--sidebar-accent);
+}
+
+.admin-page-header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+}
+
+.admin-page-header p {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+}
+
+.admin-content {
+    padding: 0 32px 32px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.admin-section {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 0;
+}
+
+.admin-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 2px solid var(--border-light);
+    background: var(--sidebar-bg);
+}
+
+.admin-section-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.admin-icon {
+    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 215, 0, 0.15);
+    border-radius: 50%;
+}
+
+.admin-section-title h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text-dark);
+}
+
+.admin-section-title p {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin: 4px 0 0 0;
+}
+
+.btn-refresh {
+    padding: 10px 20px;
+    background: var(--sidebar-accent);
+    color: var(--text-dark);
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.btn-refresh:hover {
+    background: #FFC700;
+    transform: translateY(-2px);
+}
+
+.admin-user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+    padding: 24px;
+}
+
+.admin-loading {
+    grid-column: 1 / -1;
+    padding: 40px;
+    text-align: center;
+    color: var(--text-light);
+}
+
+.admin-user-card {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 0;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.3s ease;
+}
+
+.admin-user-card:hover {
+    border-color: var(--sidebar-accent);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.1);
+}
+
+.admin-user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.admin-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.admin-user-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-dark);
+}
+
+.admin-user-email {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+.admin-chip {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 2px solid;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-chip-status {
+    background: #fff4e6;
+    border-color: #FFD700;
+    color: #c2410c;
+}
+
+.admin-chip-status.approved {
+    background: #ecfdf3;
+    border-color: #10b981;
+    color: #047857;
+}
+
+.admin-user-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.admin-role-wrapper {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.admin-role-wrapper select {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 0;
+    border: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    background: white;
+    cursor: pointer;
+    font-family: 'Vazirmatn', sans-serif;
+}
+
+.admin-user-body label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+}
+
+.admin-user-body select {
+    padding: 12px;
+    border-radius: 0;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    font-size: 0.95rem;
+    background: white;
+    cursor: pointer;
+}
+
+.admin-user-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.admin-user-actions .btn-primary,
+.admin-user-actions .btn-secondary,
+.admin-user-actions .btn-link {
+    flex: 1;
+    min-width: 100px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    border-radius: 0;
+}
+
+.admin-user-actions .btn-primary {
+    background: var(--sidebar-accent);
+    color: var(--text-dark);
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 1;
+    font-family: 'Vazirmatn', sans-serif;
+}
+
+.admin-user-actions .btn-primary:hover {
+    background: #FFC700;
+}
+
+.admin-user-actions .btn-secondary {
+    background: #f0f0f0;
+    color: var(--text-dark);
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    font-family: 'Vazirmatn', sans-serif;
+    cursor: pointer;
+}
+
+.admin-user-actions .btn-secondary:hover {
+    background: #e0e0e0;
+}
+
+.admin-user-actions .btn-link {
+    background: none;
+    color: var(--sidebar-accent);
+    border: 1px solid var(--sidebar-accent);
+    font-weight: 600;
+    font-family: 'Vazirmatn', sans-serif;
+    cursor: pointer;
+}
+
+.admin-user-actions .btn-link:hover {
+    background: rgba(255, 215, 0, 0.1);
+}
+
+.admin-role-wrapper .btn-save {
+    background: #10b981;
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Vazirmatn', sans-serif;
+    padding: 8px 12px;
+    border-radius: 0;
+    white-space: nowrap;
+}
+
+.admin-role-wrapper .btn-save:hover {
+    background: #059669;
+}
+
+.admin-logs-container {
+    overflow-x: auto;
+}
+
+.admin-logs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-logs-table thead {
+    background: var(--sidebar-bg);
+}
+
+.admin-logs-table th {
+    padding: 16px;
+    text-align: right;
+    font-weight: 700;
+    color: var(--text-dark);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.admin-logs-table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-medium);
+}
+
+.admin-logs-table tbody tr:hover {
+    background: var(--sidebar-bg);
+}
+
+.details-cell {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    max-width: 300px;
+    word-break: break-word;
+}
